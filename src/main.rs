@@ -5,9 +5,6 @@ use recipe_picker::{config::Config, db::Db, web};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Secrets (API keys) may live in a .env file next to config.toml.
-    let _ = dotenvy::dotenv();
-
     let root = std::env::current_dir()?;
     let mut config = Config::load(&root)?;
     // Lets you point at a different data folder without editing config.toml.

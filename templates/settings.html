@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+
+<section class="panel">
+  <h2 style="margin-top:0">AI for reading photos</h2>
+  <dl class="kv">
+    <dt>Using</dt><dd><strong>{{ provider }}</strong> <code>provider = "{{ kind }}"</code></dd>
+    {% for d in details %}<dt>{{ d.0 }}</dt><dd>{{ d.1 }}</dd>{% endfor %}
+  </dl>
+  {% if kind != "none" %}
+  <form method="post" action="/settings" style="margin-top:1rem">
+    <button class="secondary">Test connection</button>
+    <span class="small muted">Sends one tiny message to check the settings work.</span>
+  </form>
+  {% endif %}
+  {% if let Some(ok) = test_ok %}
+  <p class="{% if ok %}ok{% else %}error-box{% endif %}" style="margin-top:1rem">{{ test_message }}</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2 style="margin-top:0">How to change it</h2>
+  {% if !config_found %}<p class="notice warn">There's no <code>config.toml</code> yet. Copy <code>config.example.toml</code> to <code>config.toml</code> to start.</p>{% endif %}
+  <p>Edit <code>{{ config_path }}</code> and set <code>provider</code> under <code>[ai]</code> to one of:</p>
+  <ul>
+    <li><code>"openai"</code>: OpenAI with an API key. Put <code>OPENAI_API_KEY=…</code> in the <code>.env</code> file.</li>
+    <li><code>"azure_key"</code>: Azure OpenAI with an API key. Fill in <code>endpoint</code> and <code>deployment</code> under <code>[ai.azure]</code>, and put <code>AZURE_OPENAI_API_KEY=…</code> in <code>.env</code>.</li>
+    <li><code>"azure_entra"</code>: Azure OpenAI with your Azure login (Entra ID / RBAC). Fill in <code>endpoint</code> and <code>deployment</code>, then run <code>az login</code>. Your account needs the “Cognitive Services OpenAI User” role on the resource.</li>
+  </ul>
+  <p class="small muted">Changes to <code>config.toml</code> and <code>.env</code> take effect straight away: reload this page. Keys in <code>.env</code> are used before keys set in your terminal.</p>
+</section>
+
+<section class="panel">
+  <h2 style="margin-top:0">Where your data is</h2>
+  <p><code>{{ data_dir }}</code>: <code>recipes.db</code> holds your recipes, <code>images/</code> holds the photos. Use <a href="/export">Export</a> for a backup.</p>
+</section>
+{% endblock %}

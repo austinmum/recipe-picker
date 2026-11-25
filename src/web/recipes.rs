@@ -4,7 +4,7 @@
 use askama::Template;
 use axum::{
     Router,
-    extract::{Path, Query, State},
+    extract::{Path, Query, RawQuery, State},
     response::{Html, IntoResponse, Redirect},
     routing::{get, post},
 };
@@ -174,8 +174,17 @@ impl FormPage {
     }
 }
 
-async fn new_form(State(state): State<AppState>) -> WebResult<Html<String>> {
-    let recipe = Recipe::empty(state.config().default_servings);
+/// `?images=a.jpg&images=b.jpg` attaches photos already saved (used when
+/// the AI couldn't read them and you type the recipe in instead).
+async fn new_form(State(state): State<AppState>, RawQuery(query): RawQuery) -> WebResult<Html<String>> {
+    let mut recipe = Recipe::empty(state.config().default_servings);
+    #[derive(Deserialize, Default)]
+    struct Q {
+        #[serde(default)]
+        images: Vec<String>,
+    }
+    let q: Q = serde_html_form::from_str(query.as_deref().unwrap_or("")).unwrap_or_default();
+    recipe.images = q.images.into_iter().filter(|i| is_safe_file_name(i) && state.images_dir().join(i).exists()).collect();
     page(FormPage::new("manual", "Add a recipe", "", recipe))
 }
 

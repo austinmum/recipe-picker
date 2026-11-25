@@ -1,5 +1,7 @@
+pub mod ai;
 pub mod config;
 pub mod db;
+pub mod images;
 pub mod models;
 pub mod shopping;
 pub mod units;

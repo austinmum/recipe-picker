@@ -104,6 +104,35 @@ pub fn env_var(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.trim().is_empty())
 }
 
+/// An API key: from the `.env` file next to config.toml first, then the
+/// environment. The file wins so that a key set in your shell for something
+/// else (e.g. work) is never picked up by accident. The file is re-read each
+/// time, so a new key works without restarting.
+pub fn secret(root: &Path, name: &str) -> Option<String> {
+    if let Ok(iter) = dotenvy::from_path_iter(root.join(".env")) {
+        for (k, v) in iter.flatten() {
+            if k == name && !v.trim().is_empty() {
+                return Some(v.trim().to_string());
+            }
+        }
+    }
+    env_var(name)
+}
+
+/// Is the key available, and from where? (for the Settings page)
+pub fn secret_source(root: &Path, name: &str) -> Option<&'static str> {
+    let in_file = dotenvy::from_path_iter(root.join(".env"))
+        .map(|it| it.flatten().any(|(k, v)| k == name && !v.trim().is_empty()))
+        .unwrap_or(false);
+    if in_file {
+        Some(".env file")
+    } else if env_var(name).is_some() {
+        Some("environment variable")
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

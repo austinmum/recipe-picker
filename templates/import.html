@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Add from photo{% endblock %}
+{% block content %}
+<h1>Add a recipe from photos</h1>
+<p class="muted">Take photos of the recipe card (front and back for HelloFresh) and add them all here. The AI reads them into a recipe, and you check it before anything is saved.</p>
+
+{% if !ready %}
+<p class="notice warn">Photo reading isn't set up yet. See <a href="/settings">Settings</a> for how to connect an AI service. You can still <a href="/recipes/new">type a recipe in</a>.</p>
+{% else %}
+<p class="small muted">Using: {{ provider }} · <a href="/settings">change</a></p>
+{% endif %}
+
+{% if let Some(err) = error %}
+<div class="error-box">
+  <strong>That didn't work.</strong>
+  <p>{{ err }}</p>
+  {% if !kept.is_empty() %}<p><a class="button secondary" href="/recipes/new?{{ kept_query() }}">Type it in by hand instead (keeps the photos)</a></p>{% endif %}
+</div>
+{% endif %}
+
+<form id="import-form" method="post" action="/import" enctype="multipart/form-data">
+  <div class="dropzone">
+    <p><input type="file" name="photos" accept="image/*,.heic,.heif" multiple required style="width:auto"></p>
+    <p class="small muted">JPEG, PNG or iPhone (HEIC) photos. Pick several at once for the front and back.</p>
+    <div id="previews"></div>
+    <label style="flex-direction:row;justify-content:center;align-items:center;gap:.5rem;font-weight:500">
+      Read amounts for
+      <select name="servings" style="width:auto">
+        <option value="2" {% if servings == 2 %}selected{% endif %}>2 people</option>
+        <option value="4" {% if servings == 4 %}selected{% endif %}>4 people</option>
+      </select>
+    </label>
+    <p><button type="submit" {% if !ready %}disabled{% endif %}>Read recipe</button></p>
+    <p id="working" class="muted" hidden><span class="spinner"></span> Reading the photos… you'll see the recipe to check in a moment.</p>
+  </div>
+</form>
+{% endblock %}
