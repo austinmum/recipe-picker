@@ -51,17 +51,29 @@ pub async fn store(dir: &Path, file_name: &str, content_type: &str, bytes: &[u8]
             Ok(jpeg) => {
                 let name = format!("{id}.jpg");
                 tokio::fs::write(dir.join(&name), &jpeg).await?;
-                return Ok(Stored { name, mime: "image/jpeg".into(), bytes: jpeg });
+                return Ok(Stored {
+                    name,
+                    mime: "image/jpeg".into(),
+                    bytes: jpeg,
+                });
             }
             Err(e) if ext == "heic" => {
-                return Err(e.context(format!("\"{file_name}\" is a HEIC photo and couldn't be converted. Export it as JPEG and try again.")));
+                return Err(e.context(format!(
+                    "\"{file_name}\" is a HEIC photo and couldn't be converted. Export it as JPEG and try again."
+                )));
             }
             Err(_) => {} // just keep the large original
         }
     }
     let name = format!("{id}.{ext}");
-    tokio::fs::write(dir.join(&name), bytes).await.context("saving the photo")?;
-    Ok(Stored { name, mime: mime(ext).into(), bytes: bytes.to_vec() })
+    tokio::fs::write(dir.join(&name), bytes)
+        .await
+        .context("saving the photo")?;
+    Ok(Stored {
+        name,
+        mime: mime(ext).into(),
+        bytes: bytes.to_vec(),
+    })
 }
 
 /// Convert / shrink with macOS's `sips`.

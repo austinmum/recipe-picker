@@ -106,14 +106,33 @@ impl Db {
             tx.execute(
                 "INSERT INTO recipes (title, description, servings, total_minutes, source, steps, notes, images)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-                params![r.title, r.description, r.servings, r.total_minutes, r.source, steps, r.notes, images],
+                params![
+                    r.title,
+                    r.description,
+                    r.servings,
+                    r.total_minutes,
+                    r.source,
+                    steps,
+                    r.notes,
+                    images
+                ],
             )?;
             tx.last_insert_rowid()
         } else {
             let n = tx.execute(
                 "UPDATE recipes SET title=?1, description=?2, servings=?3, total_minutes=?4, source=?5,
                         steps=?6, notes=?7, images=?8, updated_at=datetime('now') WHERE id=?9",
-                params![r.title, r.description, r.servings, r.total_minutes, r.source, steps, r.notes, images, r.id],
+                params![
+                    r.title,
+                    r.description,
+                    r.servings,
+                    r.total_minutes,
+                    r.source,
+                    steps,
+                    r.notes,
+                    images,
+                    r.id
+                ],
             )?;
             anyhow::ensure!(n == 1, "recipe {} not found", r.id);
             tx.execute("DELETE FROM ingredients WHERE recipe_id=?1", [r.id])?;
@@ -126,7 +145,12 @@ impl Db {
                 params![id, i as i64, ing.original, ing.name, ing.quantity, ing.unit, ing.category.as_str(), ing.estimated, ing.note],
             )?;
         }
-        let ingredient_names = r.ingredients.iter().map(|i| i.name.as_str()).collect::<Vec<_>>().join(", ");
+        let ingredient_names = r
+            .ingredients
+            .iter()
+            .map(|i| i.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
         let body = format!("{}\n{}\n{}", r.description, r.steps.join("\n"), r.notes);
         tx.execute("DELETE FROM recipe_search WHERE rowid=?1", [id])?;
         tx.execute(
@@ -196,10 +220,14 @@ impl Db {
 
     pub fn all_recipes(&self) -> Result<Vec<Recipe>> {
         let ids: Vec<i64> = {
-            let mut stmt = self.conn.prepare("SELECT id FROM recipes ORDER BY title COLLATE NOCASE")?;
+            let mut stmt = self
+                .conn
+                .prepare("SELECT id FROM recipes ORDER BY title COLLATE NOCASE")?;
             stmt.query_map([], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?
         };
-        ids.into_iter().filter_map(|id| self.get_recipe(id).transpose()).collect()
+        ids.into_iter()
+            .filter_map(|id| self.get_recipe(id).transpose())
+            .collect()
     }
 
     pub fn delete_recipe(&self, id: i64) -> Result<()> {
@@ -211,7 +239,11 @@ impl Db {
     pub fn title_exists(&self, title: &str) -> Result<bool> {
         Ok(self
             .conn
-            .query_row("SELECT 1 FROM recipes WHERE lower(title)=lower(?1) LIMIT 1", [title], |_| Ok(()))
+            .query_row(
+                "SELECT 1 FROM recipes WHERE lower(title)=lower(?1) LIMIT 1",
+                [title],
+                |_| Ok(()),
+            )
             .optional()?
             .is_some())
     }
@@ -254,7 +286,10 @@ impl Db {
     pub fn picks(&self) -> Result<Vec<Pick>> {
         let mut stmt = self.conn.prepare("SELECT recipe_id, trip FROM week_picks")?;
         let rows = stmt.query_map([], |r| {
-            Ok(Pick { recipe_id: r.get(0)?, trip: Trip::from_i64(r.get(1)?).unwrap_or(Trip::One) })
+            Ok(Pick {
+                recipe_id: r.get(0)?,
+                trip: Trip::from_i64(r.get(1)?).unwrap_or(Trip::One),
+            })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
@@ -263,7 +298,10 @@ impl Db {
         let tx = self.conn.transaction()?;
         tx.execute("DELETE FROM week_picks", [])?;
         for p in picks {
-            tx.execute("INSERT OR REPLACE INTO week_picks (recipe_id, trip) VALUES (?1, ?2)", params![p.recipe_id, p.trip.num()])?;
+            tx.execute(
+                "INSERT OR REPLACE INTO week_picks (recipe_id, trip) VALUES (?1, ?2)",
+                params![p.recipe_id, p.trip.num()],
+            )?;
         }
         tx.commit()?;
         Ok(())
@@ -271,8 +309,19 @@ impl Db {
 
     /// Ticks for every list item that has any.
     pub fn checks(&self) -> Result<std::collections::HashMap<String, Check>> {
-        let mut stmt = self.conn.prepare("SELECT item_key, have, got, got_amount FROM list_checks")?;
-        let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, Check { have: r.get(1)?, got: r.get(2)?, got_amount: r.get(3)? })))?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT item_key, have, got, got_amount FROM list_checks")?;
+        let rows = stmt.query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                Check {
+                    have: r.get(1)?,
+                    got: r.get(2)?,
+                    got_amount: r.get(3)?,
+                },
+            ))
+        })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
@@ -293,32 +342,46 @@ impl Db {
     }
 
     pub fn extra_items(&self) -> Result<Vec<ExtraItem>> {
-        let mut stmt = self.conn.prepare("SELECT id, name, amount, trip FROM extra_items ORDER BY id")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, name, amount, trip FROM extra_items ORDER BY id")?;
         let rows = stmt.query_map([], |r| {
-            Ok(ExtraItem { id: r.get(0)?, name: r.get(1)?, amount: r.get(2)?, trip: Trip::from_i64(r.get(3)?).unwrap_or(Trip::One) })
+            Ok(ExtraItem {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                amount: r.get(2)?,
+                trip: Trip::from_i64(r.get(3)?).unwrap_or(Trip::One),
+            })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     pub fn add_extra_item(&self, name: &str, amount: &str, trip: Trip) -> Result<()> {
-        self.conn.execute("INSERT INTO extra_items (name, amount, trip) VALUES (?1, ?2, ?3)", params![name, amount, trip.num()])?;
+        self.conn.execute(
+            "INSERT INTO extra_items (name, amount, trip) VALUES (?1, ?2, ?3)",
+            params![name, amount, trip.num()],
+        )?;
         Ok(())
     }
 
     pub fn delete_extra_item(&self, id: i64) -> Result<()> {
         self.conn.execute("DELETE FROM extra_items WHERE id=?1", [id])?;
-        self.conn.execute("DELETE FROM list_checks WHERE item_key=?1", [format!("extra|{id}")])?;
+        self.conn
+            .execute("DELETE FROM list_checks WHERE item_key=?1", [format!("extra|{id}")])?;
         Ok(())
     }
 
     /// Today's date (YYYY-MM-DD, local time), for file names.
     pub fn today(&self) -> Result<String> {
-        Ok(self.conn.query_row("SELECT date('now', 'localtime')", [], |r| r.get(0))?)
+        Ok(self
+            .conn
+            .query_row("SELECT date('now', 'localtime')", [], |r| r.get(0))?)
     }
 
     /// Start a fresh week: clear picks, ticks and extra items.
     pub fn new_week(&self) -> Result<()> {
-        self.conn.execute_batch("DELETE FROM week_picks; DELETE FROM list_checks; DELETE FROM extra_items;")?;
+        self.conn
+            .execute_batch("DELETE FROM week_picks; DELETE FROM list_checks; DELETE FROM extra_items;")?;
         Ok(())
     }
 }
@@ -355,13 +418,20 @@ mod tests {
     #[test]
     fn save_load_update_delete() {
         let mut db = Db::open_in_memory().unwrap();
-        let mut r = sample("Balsamic Chicken", &[("chicken breast", 10.0, "oz", Category::MeatSeafood)]);
+        let mut r = sample(
+            "Balsamic Chicken",
+            &[("chicken breast", 10.0, "oz", Category::MeatSeafood)],
+        );
         let id = db.save_recipe(&r).unwrap();
         r.id = id;
         assert_eq!(db.get_recipe(id).unwrap().unwrap(), r);
 
         r.title = "Better Balsamic Chicken".into();
-        r.ingredients.push(Ingredient { name: "balsamic vinegar".into(), estimated: true, ..r.ingredients[0].clone() });
+        r.ingredients.push(Ingredient {
+            name: "balsamic vinegar".into(),
+            estimated: true,
+            ..r.ingredients[0].clone()
+        });
         db.save_recipe(&r).unwrap();
         assert_eq!(db.get_recipe(id).unwrap().unwrap(), r);
 
@@ -373,9 +443,20 @@ mod tests {
     #[test]
     fn search_finds_title_and_ingredients() {
         let mut db = Db::open_in_memory().unwrap();
-        db.save_recipe(&sample("Pork Tacos", &[("pork", 1.0, "lb", Category::MeatSeafood)])).unwrap();
-        db.save_recipe(&sample("Chicken Bowl", &[("jasmine rice", 1.0, "cup", Category::Pantry)])).unwrap();
-        let titles = |q: &str| db.list_recipes(q).unwrap().into_iter().map(|r| r.title).collect::<Vec<_>>();
+        db.save_recipe(&sample("Pork Tacos", &[("pork", 1.0, "lb", Category::MeatSeafood)]))
+            .unwrap();
+        db.save_recipe(&sample(
+            "Chicken Bowl",
+            &[("jasmine rice", 1.0, "cup", Category::Pantry)],
+        ))
+        .unwrap();
+        let titles = |q: &str| {
+            db.list_recipes(q)
+                .unwrap()
+                .into_iter()
+                .map(|r| r.title)
+                .collect::<Vec<_>>()
+        };
         assert_eq!(titles("chick"), vec!["Chicken Bowl"]);
         assert_eq!(titles("rice"), vec!["Chicken Bowl"]);
         assert_eq!(titles("tacos pork"), vec!["Pork Tacos"]);
@@ -387,7 +468,11 @@ mod tests {
     fn deleting_recipe_removes_pick() {
         let mut db = Db::open_in_memory().unwrap();
         let id = db.save_recipe(&sample("A", &[])).unwrap();
-        db.set_picks(&[Pick { recipe_id: id, trip: Trip::Two }]).unwrap();
+        db.set_picks(&[Pick {
+            recipe_id: id,
+            trip: Trip::Two,
+        }])
+        .unwrap();
         assert_eq!(db.picks().unwrap().len(), 1);
         db.delete_recipe(id).unwrap();
         assert!(db.picks().unwrap().is_empty());

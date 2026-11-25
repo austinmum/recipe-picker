@@ -12,7 +12,12 @@ use super::{AppState, WebResult, page, recipes::FormPage};
 use crate::{ai, config::Config, images};
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/import", get(import_page).post(upload).layer(DefaultBodyLimit::max(80 * 1024 * 1024)))
+    Router::new().route(
+        "/import",
+        get(import_page)
+            .post(upload)
+            .layer(DefaultBodyLimit::max(80 * 1024 * 1024)),
+    )
 }
 
 #[derive(Template)]
@@ -40,7 +45,11 @@ impl ImportPage {
     }
 
     fn kept_query(&self) -> String {
-        self.kept.iter().map(|k| format!("images={k}")).collect::<Vec<_>>().join("&")
+        self.kept
+            .iter()
+            .map(|k| format!("images={k}"))
+            .collect::<Vec<_>>()
+            .join("&")
     }
 }
 
@@ -54,13 +63,27 @@ async fn upload(State(state): State<AppState>, mut multipart: Multipart) -> WebR
     let mut stored = Vec::new();
     let mut problem = None;
 
-    while let Some(field) = multipart.next_field().await.map_err(|e| super::AppError::bad_request(format!("Upload failed: {e}")))? {
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| super::AppError::bad_request(format!("Upload failed: {e}")))?
+    {
         match field.name() {
-            Some("servings") => servings = field.text().await.ok().and_then(|t| t.trim().parse().ok()).unwrap_or(servings),
+            Some("servings") => {
+                servings = field
+                    .text()
+                    .await
+                    .ok()
+                    .and_then(|t| t.trim().parse().ok())
+                    .unwrap_or(servings)
+            }
             Some("photos") => {
                 let file_name = field.file_name().unwrap_or("photo").to_string();
                 let content_type = field.content_type().unwrap_or("").to_string();
-                let bytes = field.bytes().await.map_err(|e| super::AppError::bad_request(format!("Upload failed: {e}")))?;
+                let bytes = field
+                    .bytes()
+                    .await
+                    .map_err(|e| super::AppError::bad_request(format!("Upload failed: {e}")))?;
                 if bytes.is_empty() {
                     continue;
                 }
@@ -85,7 +108,13 @@ async fn upload(State(state): State<AppState>, mut multipart: Multipart) -> WebR
         return page(p);
     }
 
-    let inputs: Vec<ai::ImageInput> = stored.iter().map(|s| ai::ImageInput { mime: s.mime.clone(), bytes: s.bytes.clone() }).collect();
+    let inputs: Vec<ai::ImageInput> = stored
+        .iter()
+        .map(|s| ai::ImageInput {
+            mime: s.mime.clone(),
+            bytes: s.bytes.clone(),
+        })
+        .collect();
     match ai::extract_recipe(&config.ai, state.root(), &inputs, servings).await {
         Ok(mut recipe) => {
             recipe.images = p.kept;

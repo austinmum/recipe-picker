@@ -37,7 +37,10 @@ async fn build(state: &AppState) -> WebResult<SettingsPage> {
     };
     let details: Vec<(&'static str, String)> = match ai.provider {
         ProviderKind::None => vec![],
-        ProviderKind::Openai => vec![("Model", ai.openai.model.clone()), ("API key", key_status("OPENAI_API_KEY"))],
+        ProviderKind::Openai => vec![
+            ("Model", ai.openai.model.clone()),
+            ("API key", key_status("OPENAI_API_KEY")),
+        ],
         ProviderKind::AzureKey | ProviderKind::AzureEntra => {
             let mut d = vec![
                 ("Endpoint", ai.azure.endpoint.clone()),
@@ -47,7 +50,9 @@ async fn build(state: &AppState) -> WebResult<SettingsPage> {
             if ai.provider == ProviderKind::AzureKey {
                 d.push(("API key", key_status("AZURE_OPENAI_API_KEY")));
             } else {
-                let who = ai::azure_login::signed_in_account().await.unwrap_or_else(|| "not signed in: run `az login`".into());
+                let who = ai::azure_login::signed_in_account()
+                    .await
+                    .unwrap_or_else(|| "not signed in: run `az login`".into());
                 d.push(("Azure login", who));
                 if !ai.azure.tenant.is_empty() {
                     d.push(("Tenant", ai.azure.tenant.clone()));

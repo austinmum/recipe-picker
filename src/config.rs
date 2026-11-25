@@ -21,7 +21,12 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Config { port: 3000, data_dir: PathBuf::from("data"), default_servings: 2, ai: AiConfig::default() }
+        Config {
+            port: 3000,
+            data_dir: PathBuf::from("data"),
+            default_servings: 2,
+            ai: AiConfig::default(),
+        }
     }
 }
 
@@ -66,7 +71,10 @@ pub struct OpenAiConfig {
 
 impl Default for OpenAiConfig {
     fn default() -> Self {
-        OpenAiConfig { model: "gpt-4.1".into(), base_url: "https://api.openai.com/v1".into() }
+        OpenAiConfig {
+            model: "gpt-4.1".into(),
+            base_url: "https://api.openai.com/v1".into(),
+        }
     }
 }
 
@@ -84,7 +92,12 @@ pub struct AzureConfig {
 
 impl Default for AzureConfig {
     fn default() -> Self {
-        AzureConfig { endpoint: String::new(), deployment: String::new(), api_version: "2024-10-21".into(), tenant: String::new() }
+        AzureConfig {
+            endpoint: String::new(),
+            deployment: String::new(),
+            api_version: "2024-10-21".into(),
+            tenant: String::new(),
+        }
     }
 }
 

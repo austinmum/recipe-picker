@@ -56,7 +56,16 @@ async fn week_page(State(state): State<AppState>) -> WebResult<Html<String>> {
         .into_iter()
         .map(|r| PickRow {
             id: r.id,
-            search: format!("{} {}", r.title, r.ingredients.iter().map(|i| i.name.as_str()).collect::<Vec<_>>().join(" ")).to_lowercase(),
+            search: format!(
+                "{} {}",
+                r.title,
+                r.ingredients
+                    .iter()
+                    .map(|i| i.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            )
+            .to_lowercase(),
             thumbnail: r.images.first().cloned(),
             trip: picks.get(&r.id).map(|t| t.num()).unwrap_or(0),
             title: r.title,
@@ -69,7 +78,8 @@ async fn week_page(State(state): State<AppState>) -> WebResult<Html<String>> {
 
 /// Form fields are `pick_<recipe id>` = 0 / 1 / 2.
 async fn save_week(State(state): State<AppState>, body: String) -> WebResult<Redirect> {
-    let fields: Vec<(String, String)> = serde_html_form::from_str(&body).map_err(|e| AppError::bad_request(e.to_string()))?;
+    let fields: Vec<(String, String)> =
+        serde_html_form::from_str(&body).map_err(|e| AppError::bad_request(e.to_string()))?;
     let picks: Vec<Pick> = fields
         .into_iter()
         .filter_map(|(k, v)| {
@@ -91,8 +101,11 @@ async fn new_week(State(state): State<AppState>) -> WebResult<Redirect> {
 
 fn current_list(state: &AppState) -> WebResult<Vec<TripList>> {
     let db = state.db();
-    let picked: Vec<(Recipe, Trip)> =
-        db.picks()?.into_iter().filter_map(|p| db.get_recipe(p.recipe_id).transpose().map(|r| r.map(|r| (r, p.trip)))).collect::<Result<_, _>>()?;
+    let picked: Vec<(Recipe, Trip)> = db
+        .picks()?
+        .into_iter()
+        .filter_map(|p| db.get_recipe(p.recipe_id).transpose().map(|r| r.map(|r| (r, p.trip))))
+        .collect::<Result<_, _>>()?;
     Ok(shopping::build(&picked, &db.extra_items()?, &db.checks()?))
 }
 
@@ -107,7 +120,11 @@ struct ListPage {
 async fn list_page(State(state): State<AppState>) -> WebResult<Html<String>> {
     let trips = current_list(&state)?;
     let picked_count = trips.iter().map(|t| t.recipes.len()).sum();
-    page(ListPage { nav: "list", trips, picked_count })
+    page(ListPage {
+        nav: "list",
+        trips,
+        picked_count,
+    })
 }
 
 async fn list_text(State(state): State<AppState>) -> WebResult<impl IntoResponse> {

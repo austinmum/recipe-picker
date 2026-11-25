@@ -52,7 +52,9 @@ async fn target(ai: &AiConfig, root: &Path) -> Result<Target> {
         ))
     };
     Ok(match ai.provider {
-        ProviderKind::None => bail!("Photo import isn't set up yet. Choose an AI provider in config.toml (see the Settings page)."),
+        ProviderKind::None => {
+            bail!("Photo import isn't set up yet. Choose an AI provider in config.toml (see the Settings page).")
+        }
         ProviderKind::Openai => {
             let key = secret(root, "OPENAI_API_KEY").context("OPENAI_API_KEY is missing. Add it to the .env file.")?;
             Target {
@@ -62,13 +64,22 @@ async fn target(ai: &AiConfig, root: &Path) -> Result<Target> {
             }
         }
         ProviderKind::AzureKey => {
-            let key = secret(root, "AZURE_OPENAI_API_KEY").context("AZURE_OPENAI_API_KEY is missing. Add it to the .env file.")?;
-            Target { url: azure_url()?, auth: ("api-key".into(), key), model: None }
+            let key = secret(root, "AZURE_OPENAI_API_KEY")
+                .context("AZURE_OPENAI_API_KEY is missing. Add it to the .env file.")?;
+            Target {
+                url: azure_url()?,
+                auth: ("api-key".into(), key),
+                model: None,
+            }
         }
         ProviderKind::AzureEntra => {
             let url = azure_url()?;
             let token = azure_login::token(&ai.azure.tenant).await?;
-            Target { url, auth: ("Authorization".into(), format!("Bearer {token}")), model: None }
+            Target {
+                url,
+                auth: ("Authorization".into(), format!("Bearer {token}")),
+                model: None,
+            }
         }
     })
 }
@@ -85,7 +96,12 @@ async fn chat(ai: &AiConfig, root: &Path, mut body: Value) -> Result<String> {
         .json(&body)
         .send()
         .await
-        .with_context(|| format!("Couldn't reach {}. Check your internet connection and the address in config.toml.", host(&t.url)))?;
+        .with_context(|| {
+            format!(
+                "Couldn't reach {}. Check your internet connection and the address in config.toml.",
+                host(&t.url)
+            )
+        })?;
     let status = res.status();
     let text = res.text().await?;
     if !status.is_success() {
@@ -110,7 +126,10 @@ async fn chat(ai: &AiConfig, root: &Path, mut body: Value) -> Result<String> {
     if choice["finish_reason"] == "length" {
         bail!("The AI's answer was cut off. Try fewer or smaller photos.");
     }
-    choice["message"]["content"].as_str().map(str::to_string).ok_or_else(|| anyhow!("The AI service sent back an empty answer."))
+    choice["message"]["content"]
+        .as_str()
+        .map(str::to_string)
+        .ok_or_else(|| anyhow!("The AI service sent back an empty answer."))
 }
 
 fn host(url: &str) -> &str {
@@ -169,7 +188,8 @@ struct AiIngredient {
 }
 
 fn parse_answer(answer: &str, servings: i64) -> Result<Recipe> {
-    let r: AiRecipe = serde_json::from_str(answer).context("The AI's answer wasn't in the expected format. Try again.")?;
+    let r: AiRecipe =
+        serde_json::from_str(answer).context("The AI's answer wasn't in the expected format. Try again.")?;
     Ok(Recipe {
         id: 0,
         title: r.title.trim().to_string(),
@@ -191,7 +211,12 @@ fn parse_answer(answer: &str, servings: i64) -> Result<Recipe> {
                 note: i.estimate_note.trim().to_string(),
             })
             .collect(),
-        steps: r.steps.into_iter().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect(),
+        steps: r
+            .steps
+            .into_iter()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
         notes: r.notes.trim().to_string(),
         images: Vec::new(),
     })
@@ -234,7 +259,12 @@ mod tests {
         // Strict mode requires every property to be listed as required.
         fn check(v: &Value) {
             if let Some(props) = v.get("properties").and_then(Value::as_object) {
-                let required: Vec<&str> = v["required"].as_array().unwrap().iter().map(|r| r.as_str().unwrap()).collect();
+                let required: Vec<&str> = v["required"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|r| r.as_str().unwrap())
+                    .collect();
                 for (k, child) in props {
                     assert!(required.contains(&k.as_str()), "{k} must be required");
                     check(child);
@@ -258,7 +288,12 @@ mod tests {
                 assert_eq!(body["model"], "test-model");
                 assert_eq!(body["response_format"]["json_schema"]["strict"], true);
                 let content = body["messages"][1]["content"].as_array().unwrap();
-                assert!(content[1]["image_url"]["url"].as_str().unwrap().starts_with("data:image/jpeg;base64,"));
+                assert!(
+                    content[1]["image_url"]["url"]
+                        .as_str()
+                        .unwrap()
+                        .starts_with("data:image/jpeg;base64,")
+                );
                 Json(json!({ "choices": [{ "finish_reason": "stop", "message": { "content": SAMPLE } }] }))
             }),
         );
@@ -270,10 +305,16 @@ mod tests {
         std::fs::write(dir.path().join(".env"), "OPENAI_API_KEY=test-key\n").unwrap();
         let ai = AiConfig {
             provider: ProviderKind::Openai,
-            openai: OpenAiConfig { model: "test-model".into(), base_url: format!("http://{addr}/v1") },
+            openai: OpenAiConfig {
+                model: "test-model".into(),
+                base_url: format!("http://{addr}/v1"),
+            },
             ..AiConfig::default()
         };
-        let img = ImageInput { mime: "image/jpeg".into(), bytes: vec![1, 2, 3] };
+        let img = ImageInput {
+            mime: "image/jpeg".into(),
+            bytes: vec![1, 2, 3],
+        };
         let r = extract_recipe(&ai, dir.path(), &[img], 2).await.unwrap();
         assert_eq!(r.ingredients.len(), 3);
     }
@@ -283,8 +324,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let err = test_connection(&AiConfig::default(), dir.path()).await.unwrap_err();
         assert!(err.to_string().contains("isn't set up"));
-        let azure = AiConfig { provider: ProviderKind::AzureKey, ..AiConfig::default() };
+        let azure = AiConfig {
+            provider: ProviderKind::AzureKey,
+            ..AiConfig::default()
+        };
         let err = test_connection(&azure, dir.path()).await.unwrap_err();
-        assert!(format!("{err:#}").contains("endpoint") || format!("{err:#}").contains("AZURE_OPENAI_API_KEY"), "{err:#}");
+        assert!(
+            format!("{err:#}").contains("endpoint") || format!("{err:#}").contains("AZURE_OPENAI_API_KEY"),
+            "{err:#}"
+        );
     }
 }

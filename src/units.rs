@@ -21,16 +21,76 @@ struct UnitDef {
 }
 
 const UNITS: &[UnitDef] = &[
-    UnitDef { canonical: "tsp", kind: Kind::Volume, factor: 1.0, metric: false, aliases: &["tsp", "tsps", "teaspoon", "teaspoons", "t"] },
-    UnitDef { canonical: "tbsp", kind: Kind::Volume, factor: 3.0, metric: false, aliases: &["tbsp", "tbsps", "tbs", "tablespoon", "tablespoons", "T"] },
-    UnitDef { canonical: "fl oz", kind: Kind::Volume, factor: 6.0, metric: false, aliases: &["fl oz", "fl. oz", "fl. oz.", "fluid ounce", "fluid ounces", "floz"] },
-    UnitDef { canonical: "cup", kind: Kind::Volume, factor: 48.0, metric: false, aliases: &["cup", "cups", "c"] },
-    UnitDef { canonical: "ml", kind: Kind::Volume, factor: 0.202_884, metric: true, aliases: &["ml", "mls", "milliliter", "milliliters", "millilitre", "millilitres"] },
-    UnitDef { canonical: "l", kind: Kind::Volume, factor: 202.884, metric: true, aliases: &["l", "liter", "liters", "litre", "litres"] },
-    UnitDef { canonical: "oz", kind: Kind::Weight, factor: 28.349_5, metric: false, aliases: &["oz", "ounce", "ounces", "oz."] },
-    UnitDef { canonical: "lb", kind: Kind::Weight, factor: 453.592, metric: false, aliases: &["lb", "lbs", "pound", "pounds", "lb."] },
-    UnitDef { canonical: "g", kind: Kind::Weight, factor: 1.0, metric: true, aliases: &["g", "gram", "grams", "gr"] },
-    UnitDef { canonical: "kg", kind: Kind::Weight, factor: 1000.0, metric: true, aliases: &["kg", "kilogram", "kilograms", "kgs"] },
+    UnitDef {
+        canonical: "tsp",
+        kind: Kind::Volume,
+        factor: 1.0,
+        metric: false,
+        aliases: &["tsp", "tsps", "teaspoon", "teaspoons", "t"],
+    },
+    UnitDef {
+        canonical: "tbsp",
+        kind: Kind::Volume,
+        factor: 3.0,
+        metric: false,
+        aliases: &["tbsp", "tbsps", "tbs", "tablespoon", "tablespoons", "T"],
+    },
+    UnitDef {
+        canonical: "fl oz",
+        kind: Kind::Volume,
+        factor: 6.0,
+        metric: false,
+        aliases: &["fl oz", "fl. oz", "fl. oz.", "fluid ounce", "fluid ounces", "floz"],
+    },
+    UnitDef {
+        canonical: "cup",
+        kind: Kind::Volume,
+        factor: 48.0,
+        metric: false,
+        aliases: &["cup", "cups", "c"],
+    },
+    UnitDef {
+        canonical: "ml",
+        kind: Kind::Volume,
+        factor: 0.202_884,
+        metric: true,
+        aliases: &["ml", "mls", "milliliter", "milliliters", "millilitre", "millilitres"],
+    },
+    UnitDef {
+        canonical: "l",
+        kind: Kind::Volume,
+        factor: 202.884,
+        metric: true,
+        aliases: &["l", "liter", "liters", "litre", "litres"],
+    },
+    UnitDef {
+        canonical: "oz",
+        kind: Kind::Weight,
+        factor: 28.349_5,
+        metric: false,
+        aliases: &["oz", "ounce", "ounces", "oz."],
+    },
+    UnitDef {
+        canonical: "lb",
+        kind: Kind::Weight,
+        factor: 453.592,
+        metric: false,
+        aliases: &["lb", "lbs", "pound", "pounds", "lb."],
+    },
+    UnitDef {
+        canonical: "g",
+        kind: Kind::Weight,
+        factor: 1.0,
+        metric: true,
+        aliases: &["g", "gram", "grams", "gr"],
+    },
+    UnitDef {
+        canonical: "kg",
+        kind: Kind::Weight,
+        factor: 1000.0,
+        metric: true,
+        aliases: &["kg", "kilogram", "kilograms", "kgs"],
+    },
 ];
 
 fn lookup(unit: &str) -> Option<&'static UnitDef> {
@@ -52,7 +112,10 @@ pub fn normalize_unit(unit: &str) -> String {
         Some(d) => d.canonical.to_string(),
         None => {
             let u = unit.trim().to_lowercase();
-            if matches!(u.as_str(), "unit" | "units" | "each" | "ea" | "whole" | "count" | "pc" | "pcs" | "piece" | "pieces") {
+            if matches!(
+                u.as_str(),
+                "unit" | "units" | "each" | "ea" | "whole" | "count" | "pc" | "pcs" | "piece" | "pieces"
+            ) {
                 String::new()
             } else {
                 singular(&u)
@@ -82,11 +145,7 @@ pub fn name_key(name: &str) -> String {
         .chars()
         .map(|c| if c.is_alphanumeric() || c == ' ' { c } else { ' ' })
         .collect();
-    cleaned
-        .split_whitespace()
-        .map(singular)
-        .collect::<Vec<_>>()
-        .join(" ")
+    cleaned.split_whitespace().map(singular).collect::<Vec<_>>().join(" ")
 }
 
 /// Parse "2", "1.5", "1/2", "1 1/2", "½", "1½", "2-3" (takes the larger).
@@ -109,11 +168,11 @@ pub fn parse_quantity(input: &str) -> Option<f64> {
         let mut part = part.to_string();
         // Split a trailing unicode fraction off a whole number: "1½" -> "1" + "½".
         let mut frac = 0.0;
-        if let Some(last) = part.chars().last() {
-            if let Some(v) = unicode_fraction(last) {
-                frac = v;
-                part.pop();
-            }
+        if let Some(last) = part.chars().last()
+            && let Some(v) = unicode_fraction(last)
+        {
+            frac = v;
+            part.pop();
         }
         let value = if part.is_empty() {
             0.0
@@ -129,7 +188,11 @@ pub fn parse_quantity(input: &str) -> Option<f64> {
         total += value + frac;
         any = true;
     }
-    if any && total.is_finite() && total >= 0.0 { Some(total) } else { None }
+    if any && total.is_finite() && total >= 0.0 {
+        Some(total)
+    } else {
+        None
+    }
 }
 
 fn unicode_fraction(c: char) -> Option<f64> {
@@ -206,12 +269,20 @@ impl Amount {
         };
         match lookup(unit) {
             Some(d) if d.kind == Kind::Volume => {
-                self.volume_metric_only = if self.has_volume { self.volume_metric_only && d.metric } else { d.metric };
+                self.volume_metric_only = if self.has_volume {
+                    self.volume_metric_only && d.metric
+                } else {
+                    d.metric
+                };
                 self.has_volume = true;
                 self.volume_tsp += q * d.factor;
             }
             Some(d) => {
-                self.weight_metric_only = if self.has_weight { self.weight_metric_only && d.metric } else { d.metric };
+                self.weight_metric_only = if self.has_weight {
+                    self.weight_metric_only && d.metric
+                } else {
+                    d.metric
+                };
                 self.has_weight = true;
                 self.weight_g += q * d.factor;
             }
@@ -257,7 +328,11 @@ fn plural(unit: &str) -> String {
 fn display_volume(tsp: f64, metric: bool) -> String {
     if metric {
         let ml = tsp / 0.202_884;
-        return if ml >= 1000.0 { format!("{} l", format_number(ml / 1000.0)) } else { format!("{} ml", ml.round()) };
+        return if ml >= 1000.0 {
+            format!("{} l", format_number(ml / 1000.0))
+        } else {
+            format!("{} ml", ml.round())
+        };
     }
     if tsp < 3.0 - 1e-9 {
         format!("{} tsp", format_number(tsp))
@@ -271,7 +346,11 @@ fn display_volume(tsp: f64, metric: bool) -> String {
 
 fn display_weight(g: f64, metric: bool) -> String {
     if metric {
-        return if g >= 1000.0 { format!("{} kg", format_number(g / 1000.0)) } else { format!("{} g", g.round()) };
+        return if g >= 1000.0 {
+            format!("{} kg", format_number(g / 1000.0))
+        } else {
+            format!("{} g", g.round())
+        };
     }
     let oz = g / 28.349_5;
     if oz < 16.0 - 1e-6 {

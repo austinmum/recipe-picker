@@ -27,19 +27,30 @@ struct AzToken {
 }
 
 fn now() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 pub async fn token(tenant: &str) -> Result<String> {
     let tenant = tenant.trim().to_string();
-    if let Some(c) = CACHE.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
-        if c.tenant == tenant && c.expires_at > now() + 300 {
-            return Ok(c.token.clone());
-        }
+    if let Some(c) = CACHE.lock().unwrap_or_else(|e| e.into_inner()).as_ref()
+        && c.tenant == tenant
+        && c.expires_at > now() + 300
+    {
+        return Ok(c.token.clone());
     }
 
     let mut cmd = tokio::process::Command::new("az");
-    cmd.args(["account", "get-access-token", "--resource", RESOURCE, "--output", "json"]);
+    cmd.args([
+        "account",
+        "get-access-token",
+        "--resource",
+        RESOURCE,
+        "--output",
+        "json",
+    ]);
     if !tenant.is_empty() {
         cmd.args(["--tenant", &tenant]);
     }
@@ -49,18 +60,36 @@ pub async fn token(tenant: &str) -> Result<String> {
         .context("Couldn't run the Azure CLI (`az`). Install it, or switch to a key-based provider in config.toml.")?;
     if !out.status.success() {
         let err = String::from_utf8_lossy(&out.stderr);
-        bail!("Couldn't get an Azure login token. Run `az login` in a terminal{} and try again.\n\nAzure CLI said: {}",
-            if tenant.is_empty() { String::new() } else { format!(" (with --tenant {tenant})") },
-            err.trim());
+        bail!(
+            "Couldn't get an Azure login token. Run `az login` in a terminal{} and try again.\n\nAzure CLI said: {}",
+            if tenant.is_empty() {
+                String::new()
+            } else {
+                format!(" (with --tenant {tenant})")
+            },
+            err.trim()
+        );
     }
-    let t: AzToken = serde_json::from_slice(&out.stdout).context("Unexpected answer from `az account get-access-token`.")?;
+    let t: AzToken =
+        serde_json::from_slice(&out.stdout).context("Unexpected answer from `az account get-access-token`.")?;
     let expires_at = t.expires_on.unwrap_or(now() + 30 * 60);
-    *CACHE.lock().unwrap_or_else(|e| e.into_inner()) = Some(Cached { tenant, token: t.access_token.clone(), expires_at });
+    *CACHE.lock().unwrap_or_else(|e| e.into_inner()) = Some(Cached {
+        tenant,
+        token: t.access_token.clone(),
+        expires_at,
+    });
     Ok(t.access_token)
 }
 
 /// For the Settings page: who is `az` logged in as (if anyone)?
 pub async fn signed_in_account() -> Option<String> {
-    let out = tokio::process::Command::new("az").args(["account", "show", "--query", "user.name", "--output", "tsv"]).output().await.ok()?;
-    out.status.success().then(|| String::from_utf8_lossy(&out.stdout).trim().to_string()).filter(|s| !s.is_empty())
+    let out = tokio::process::Command::new("az")
+        .args(["account", "show", "--query", "user.name", "--output", "tsv"])
+        .output()
+        .await
+        .ok()?;
+    out.status
+        .success()
+        .then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
+        .filter(|s| !s.is_empty())
 }

@@ -47,8 +47,17 @@ struct ListPage {
 async fn list(State(state): State<AppState>, Query(query): Query<ListQuery>) -> WebResult<Html<String>> {
     let db = state.db();
     let recipes = db.list_recipes(&query.q)?;
-    let total = if query.q.trim().is_empty() { recipes.len() } else { db.list_recipes("")?.len() };
-    page(ListPage { nav: "recipes", q: query.q, recipes, total })
+    let total = if query.q.trim().is_empty() {
+        recipes.len()
+    } else {
+        db.list_recipes("")?.len()
+    };
+    page(ListPage {
+        nav: "recipes",
+        q: query.q,
+        recipes,
+        total,
+    })
 }
 
 // ---------- show ----------
@@ -67,7 +76,13 @@ impl IngredientLine {
             Some(q) => format!("{} {}", format_number(q), i.unit).trim().to_string(),
             None => String::new(),
         };
-        IngredientLine { amount, name: i.name.clone(), estimated: i.estimated, original: i.original.clone(), note: i.note.clone() }
+        IngredientLine {
+            amount,
+            name: i.name.clone(),
+            estimated: i.estimated,
+            original: i.original.clone(),
+            note: i.note.clone(),
+        }
     }
 }
 
@@ -80,9 +95,16 @@ struct ShowPage {
 }
 
 async fn show(State(state): State<AppState>, Path(id): Path<i64>) -> WebResult<Html<String>> {
-    let recipe = state.db().get_recipe(id)?.ok_or_else(|| AppError::not_found("Recipe"))?;
+    let recipe = state
+        .db()
+        .get_recipe(id)?
+        .ok_or_else(|| AppError::not_found("Recipe"))?;
     let lines = recipe.ingredients.iter().map(IngredientLine::from).collect();
-    page(ShowPage { nav: "recipes", recipe, lines })
+    page(ShowPage {
+        nav: "recipes",
+        recipe,
+        lines,
+    })
 }
 
 async fn delete(State(state): State<AppState>, Path(id): Path<i64>) -> WebResult<Redirect> {
@@ -98,7 +120,13 @@ pub struct CatOpt {
 }
 
 pub fn category_options() -> Vec<CatOpt> {
-    Category::ALL.iter().map(|c| CatOpt { value: c.as_str(), label: c.label() }).collect()
+    Category::ALL
+        .iter()
+        .map(|c| CatOpt {
+            value: c.as_str(),
+            label: c.label(),
+        })
+        .collect()
 }
 
 pub struct IngRow {
@@ -184,12 +212,19 @@ async fn new_form(State(state): State<AppState>, RawQuery(query): RawQuery) -> W
         images: Vec<String>,
     }
     let q: Q = serde_html_form::from_str(query.as_deref().unwrap_or("")).unwrap_or_default();
-    recipe.images = q.images.into_iter().filter(|i| is_safe_file_name(i) && state.images_dir().join(i).exists()).collect();
+    recipe.images = q
+        .images
+        .into_iter()
+        .filter(|i| is_safe_file_name(i) && state.images_dir().join(i).exists())
+        .collect();
     page(FormPage::new("manual", "Add a recipe", "", recipe))
 }
 
 async fn edit_form(State(state): State<AppState>, Path(id): Path<i64>) -> WebResult<Html<String>> {
-    let recipe = state.db().get_recipe(id)?.ok_or_else(|| AppError::not_found("Recipe"))?;
+    let recipe = state
+        .db()
+        .get_recipe(id)?
+        .ok_or_else(|| AppError::not_found("Recipe"))?;
     page(FormPage::new("recipes", "Edit recipe", "", recipe))
 }
 
@@ -235,7 +270,9 @@ impl RecipeForm {
             }
             let quantity = parse_quantity(&qty_text);
             if quantity.is_none() && !qty_text.is_empty() {
-                return Err(format!("Couldn't read the amount \"{qty_text}\" for {name}. Use numbers like 2, 1.5, 1/2 or 1 1/2."));
+                return Err(format!(
+                    "Couldn't read the amount \"{qty_text}\" for {name}. Use numbers like 2, 1.5, 1/2 or 1 1/2."
+                ));
             }
             ingredients.push(Ingredient {
                 original: if original.is_empty() { name.clone() } else { original },
@@ -268,7 +305,11 @@ pub fn split_steps(text: &str) -> Vec<String> {
         .map(|l| {
             let l = l.trim();
             let digits = l.chars().take_while(|c| c.is_ascii_digit()).count();
-            if digits > 0 && l[digits..].starts_with(['.', ')']) { l[digits + 1..].trim() } else { l }
+            if digits > 0 && l[digits..].starts_with(['.', ')']) {
+                l[digits + 1..].trim()
+            } else {
+                l
+            }
         })
         .filter(|l| !l.is_empty())
         .map(str::to_string)
@@ -277,11 +318,16 @@ pub fn split_steps(text: &str) -> Vec<String> {
 
 /// Image names come back from the form; only accept names we could have made.
 pub fn is_safe_file_name(name: &str) -> bool {
-    !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.') && !name.starts_with('.')
+    !name.is_empty()
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+        && !name.starts_with('.')
 }
 
 async fn save(State(state): State<AppState>, body: String) -> WebResult<impl IntoResponse> {
-    let form: RecipeForm = serde_html_form::from_str(&body).map_err(|e| AppError::bad_request(format!("Bad form: {e}")))?;
+    let form: RecipeForm =
+        serde_html_form::from_str(&body).map_err(|e| AppError::bad_request(format!("Bad form: {e}")))?;
     let recipe = form.into_recipe().map_err(AppError::bad_request)?;
     let id = state.db().save_recipe(&recipe)?;
     Ok(Redirect::to(&format!("/recipes/{id}")))

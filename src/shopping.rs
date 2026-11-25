@@ -82,10 +82,23 @@ pub fn build(picked: &[(Recipe, Trip)], extras: &[ExtraItem], checks: &HashMap<S
     let mut acc: BTreeMap<String, (Trip, Acc)> = BTreeMap::new();
     for (recipe, recipe_trip) in picked {
         for ing in &recipe.ingredients {
-            let trip = if ing.category.is_fresh() { *recipe_trip } else { Trip::One };
+            let trip = if ing.category.is_fresh() {
+                *recipe_trip
+            } else {
+                Trip::One
+            };
             let key = item_key(trip, &ing.name);
             let (_, a) = acc.entry(key).or_insert_with(|| {
-                (trip, Acc { name: ing.name.clone(), category: ing.category, amount: Amount::default(), estimated: false, recipes: Vec::new() })
+                (
+                    trip,
+                    Acc {
+                        name: ing.name.clone(),
+                        category: ing.category,
+                        amount: Amount::default(),
+                        estimated: false,
+                        recipes: Vec::new(),
+                    },
+                )
             });
             a.amount.add(ing.quantity, &ing.unit);
             a.estimated |= ing.estimated;
@@ -120,7 +133,11 @@ pub fn build(picked: &[(Recipe, Trip)], extras: &[ExtraItem], checks: &HashMap<S
                 .into_iter()
                 .map(|(category, mut items)| {
                     items.sort_by_key(|i| i.name.to_lowercase());
-                    Aisle { category, label: category.label(), items }
+                    Aisle {
+                        category,
+                        label: category.label(),
+                        items,
+                    }
                 })
                 .collect();
             let extras = extras
@@ -129,11 +146,29 @@ pub fn build(picked: &[(Recipe, Trip)], extras: &[ExtraItem], checks: &HashMap<S
                 .map(|e| {
                     let key = extra_key(e.id);
                     let (have, got) = ticks(checks, &key, &e.amount);
-                    ListItem { key, name: e.name.clone(), amount: e.amount.clone(), estimated: false, recipes: vec![], have, got, extra_id: Some(e.id) }
+                    ListItem {
+                        key,
+                        name: e.name.clone(),
+                        amount: e.amount.clone(),
+                        estimated: false,
+                        recipes: vec![],
+                        have,
+                        got,
+                        extra_id: Some(e.id),
+                    }
                 })
                 .collect();
-            let recipes = picked.iter().filter(|(_, t)| *t == trip).map(|(r, _)| r.title.clone()).collect();
-            TripList { trip, recipes, aisles, extras }
+            let recipes = picked
+                .iter()
+                .filter(|(_, t)| *t == trip)
+                .map(|(r, _)| r.title.clone())
+                .collect();
+            TripList {
+                trip,
+                recipes,
+                aisles,
+                extras,
+            }
         })
         .collect()
 }
@@ -150,11 +185,19 @@ pub fn as_text(trips: &[TripList]) -> String {
             }
             out.push_str(&format!("\n{}\n", a.label.to_uppercase()));
             for i in needed {
-                out.push_str(&format!("[{}] {}{} {}\n", if i.got { "x" } else { " " }, if i.estimated { "~" } else { "" }, i.amount, i.name));
+                out.push_str(&format!(
+                    "[{}] {}{} {}\n",
+                    if i.got { "x" } else { " " },
+                    if i.estimated { "~" } else { "" },
+                    i.amount,
+                    i.name
+                ));
             }
         }
         for i in t.extras.iter().filter(|i| !i.have) {
-            out.push_str(&format!("[{}] {} {}\n", if i.got { "x" } else { " " }, i.amount, i.name).replace("]  ", "] "));
+            out.push_str(
+                &format!("[{}] {} {}\n", if i.got { "x" } else { " " }, i.amount, i.name).replace("]  ", "] "),
+            );
         }
         out.push('\n');
     }
@@ -167,13 +210,30 @@ mod tests {
     use crate::models::{Category::*, sample};
 
     fn find<'a>(t: &'a TripList, name: &str) -> Option<&'a ListItem> {
-        t.aisles.iter().flat_map(|a| &a.items).find(|i| i.name.eq_ignore_ascii_case(name))
+        t.aisles
+            .iter()
+            .flat_map(|a| &a.items)
+            .find(|i| i.name.eq_ignore_ascii_case(name))
     }
 
     #[test]
     fn fresh_follows_recipe_trip_and_pantry_goes_on_trip_one() {
-        let a = sample("Tacos", &[("lime", 1.0, "", Produce), ("cumin", 1.0, "tsp", Spices), ("ground beef", 10.0, "oz", MeatSeafood)]);
-        let b = sample("Bowl", &[("limes", 2.0, "", Produce), ("cumin", 2.0, "tsp", Spices), ("rice", 0.5, "cup", Pantry)]);
+        let a = sample(
+            "Tacos",
+            &[
+                ("lime", 1.0, "", Produce),
+                ("cumin", 1.0, "tsp", Spices),
+                ("ground beef", 10.0, "oz", MeatSeafood),
+            ],
+        );
+        let b = sample(
+            "Bowl",
+            &[
+                ("limes", 2.0, "", Produce),
+                ("cumin", 2.0, "tsp", Spices),
+                ("rice", 0.5, "cup", Pantry),
+            ],
+        );
         let trips = build(&[(a, Trip::One), (b, Trip::Two)], &[], &HashMap::new());
         let (one, two) = (&trips[0], &trips[1]);
 
@@ -194,8 +254,20 @@ mod tests {
 
     #[test]
     fn same_trip_fresh_items_combine_and_aisles_are_ordered() {
-        let a = sample("A", &[("Roma tomatoes", 2.0, "", Produce), ("chicken breast", 10.0, "oz", MeatSeafood)]);
-        let b = sample("B", &[("roma tomato", 1.0, "", Produce), ("chicken breast", 10.0, "oz", MeatSeafood)]);
+        let a = sample(
+            "A",
+            &[
+                ("Roma tomatoes", 2.0, "", Produce),
+                ("chicken breast", 10.0, "oz", MeatSeafood),
+            ],
+        );
+        let b = sample(
+            "B",
+            &[
+                ("roma tomato", 1.0, "", Produce),
+                ("chicken breast", 10.0, "oz", MeatSeafood),
+            ],
+        );
         let trips = build(&[(a, Trip::One), (b, Trip::One)], &[], &HashMap::new());
         let one = &trips[0];
         assert_eq!(find(one, "roma tomatoes").unwrap().amount, "3");
@@ -209,9 +281,21 @@ mod tests {
     fn estimates_and_ticks_carry_through() {
         let mut a = sample("A", &[("balsamic vinegar", 2.0, "tbsp", Pantry)]);
         a.ingredients[0].estimated = true;
-        let tick = |have, got, amt: &str| Check { have, got, got_amount: amt.into() };
-        let checks = HashMap::from([(item_key(Trip::One, "Balsamic Vinegar"), tick(true, false, "")), (extra_key(7), tick(false, true, "2"))]);
-        let extras = vec![ExtraItem { id: 7, name: "paper towels".into(), amount: "2".into(), trip: Trip::Two }];
+        let tick = |have, got, amt: &str| Check {
+            have,
+            got,
+            got_amount: amt.into(),
+        };
+        let checks = HashMap::from([
+            (item_key(Trip::One, "Balsamic Vinegar"), tick(true, false, "")),
+            (extra_key(7), tick(false, true, "2")),
+        ]);
+        let extras = vec![ExtraItem {
+            id: 7,
+            name: "paper towels".into(),
+            amount: "2".into(),
+            trip: Trip::Two,
+        }];
         let trips = build(&[(a, Trip::Two)], &extras, &checks);
         let item = find(&trips[0], "balsamic vinegar").unwrap();
         assert!(item.estimated && item.have && !item.got);
@@ -222,7 +306,14 @@ mod tests {
     fn got_tick_resets_when_amount_changes() {
         let a = sample("A", &[("lime", 2.0, "", Produce)]);
         let b = sample("B", &[("lime", 1.0, "", Produce)]);
-        let checks = HashMap::from([(item_key(Trip::One, "lime"), Check { have: false, got: true, got_amount: "2".into() })]);
+        let checks = HashMap::from([(
+            item_key(Trip::One, "lime"),
+            Check {
+                have: false,
+                got: true,
+                got_amount: "2".into(),
+            },
+        )]);
         let only_a = build(&[(a.clone(), Trip::One)], &[], &checks);
         assert!(find(&only_a[0], "lime").unwrap().got);
         let both = build(&[(a, Trip::One), (b, Trip::One)], &[], &checks);

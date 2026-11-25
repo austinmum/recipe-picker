@@ -22,14 +22,27 @@ Rules:
 "#;
 
 pub fn user_message(servings: i64, photos: usize) -> String {
-    let photos = if photos == 1 { "this photo".to_string() } else { format!("these {photos} photos (all are the same recipe)") };
+    let photos = if photos == 1 {
+        "this photo".to_string()
+    } else {
+        format!("these {photos} photos (all are the same recipe)")
+    };
     format!("Read the recipe in {photos}. Use the amounts for {servings} servings.")
 }
 
 /// JSON schema for the answer. Strict mode: every property listed as required,
 /// optional values expressed as nullable types.
 pub fn schema() -> Value {
-    let categories = ["produce", "meat_seafood", "dairy_eggs", "bakery", "frozen", "pantry", "spices", "other"];
+    let categories = [
+        "produce",
+        "meat_seafood",
+        "dairy_eggs",
+        "bakery",
+        "frozen",
+        "pantry",
+        "spices",
+        "other",
+    ];
     json!({
         "type": "object",
         "additionalProperties": false,

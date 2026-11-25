@@ -27,7 +27,11 @@ pub fn export_zip(db: &Db, images_dir: &Path) -> Result<Vec<u8>> {
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let opts = SimpleFileOptions::default();
 
-    let file = ExportFile { app: "recipe-picker".into(), format_version: 1, recipes };
+    let file = ExportFile {
+        app: "recipe-picker".into(),
+        format_version: 1,
+        recipes,
+    };
     zip.start_file("recipes.json", opts)?;
     zip.write_all(serde_json::to_string_pretty(&file)?.as_bytes())?;
 
@@ -49,7 +53,10 @@ pub fn export_zip(db: &Db, images_dir: &Path) -> Result<Vec<u8>> {
         }
         if let Ok(bytes) = std::fs::read(images_dir.join(img)) {
             // Photos are already compressed; storing them as-is is faster.
-            zip.start_file(format!("images/{img}"), opts.compression_method(zip::CompressionMethod::Stored))?;
+            zip.start_file(
+                format!("images/{img}"),
+                opts.compression_method(zip::CompressionMethod::Stored),
+            )?;
             zip.write_all(&bytes)?;
         }
     }
@@ -68,11 +75,17 @@ pub struct ImportSummary {
 /// file twice doesn't make duplicates.
 pub fn import(db: &mut Db, images_dir: &Path, bytes: &[u8]) -> Result<ImportSummary> {
     let is_zip = bytes.starts_with(b"PK");
-    let mut archive = if is_zip { Some(zip::ZipArchive::new(Cursor::new(bytes)).context("That file isn't a readable .zip")?) } else { None };
+    let mut archive = if is_zip {
+        Some(zip::ZipArchive::new(Cursor::new(bytes)).context("That file isn't a readable .zip")?)
+    } else {
+        None
+    };
 
     let json = match archive.as_mut() {
         Some(a) => {
-            let mut f = a.by_name("recipes.json").context("This .zip has no recipes.json, so it isn't a Recipe Picker export.")?;
+            let mut f = a
+                .by_name("recipes.json")
+                .context("This .zip has no recipes.json, so it isn't a Recipe Picker export.")?;
             let mut s = String::new();
             f.read_to_string(&mut s)?;
             s
@@ -116,7 +129,11 @@ pub fn import(db: &mut Db, images_dir: &Path, bytes: &[u8]) -> Result<ImportSumm
 }
 
 fn slug(title: &str) -> String {
-    let s: String = title.to_lowercase().chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '-' }).collect();
+    let s: String = title
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect();
     let s = s.split('-').filter(|p| !p.is_empty()).collect::<Vec<_>>().join("-");
     if s.is_empty() { "recipe".into() } else { s }
 }
@@ -135,9 +152,16 @@ pub fn markdown(r: &Recipe) -> String {
     }
     md += &format!("{}\n\n## Ingredients\n\n", facts.join(" · "));
     for i in &r.ingredients {
-        let amount = i.quantity.map(|q| format!("{}{} {} ", if i.estimated { "~" } else { "" }, format_number(q), i.unit)).unwrap_or_default();
+        let amount = i
+            .quantity
+            .map(|q| format!("{}{} {} ", if i.estimated { "~" } else { "" }, format_number(q), i.unit))
+            .unwrap_or_default();
         let amount = amount.replace("  ", " ");
-        let note = if i.estimated && !i.note.is_empty() { format!(" _(estimated: {})_", i.note) } else { String::new() };
+        let note = if i.estimated && !i.note.is_empty() {
+            format!(" _(estimated: {})_", i.note)
+        } else {
+            String::new()
+        };
         md += &format!("- {amount}{}{note}\n", i.name);
     }
     md += "\n## Steps\n\n";
@@ -165,13 +189,17 @@ mod tests {
     fn export_then_import_gives_same_recipes() {
         let src_dir = tempfile::tempdir().unwrap();
         let mut db = Db::open_in_memory().unwrap();
-        let mut a = sample("Balsamic Chicken", &[("balsamic vinegar", 2.0, "tbsp", Category::Pantry)]);
+        let mut a = sample(
+            "Balsamic Chicken",
+            &[("balsamic vinegar", 2.0, "tbsp", Category::Pantry)],
+        );
         a.ingredients[0].estimated = true;
         a.ingredients[0].note = "1 packet ≈ 2 tbsp".into();
         a.images = vec!["abc.jpg".into()];
         std::fs::write(src_dir.path().join("abc.jpg"), b"photo").unwrap();
         db.save_recipe(&a).unwrap();
-        db.save_recipe(&sample("Tacos", &[("lime", 1.0, "", Category::Produce)])).unwrap();
+        db.save_recipe(&sample("Tacos", &[("lime", 1.0, "", Category::Produce)]))
+            .unwrap();
 
         let zip = export_zip(&db, src_dir.path()).unwrap();
 
@@ -194,7 +222,13 @@ mod tests {
 
     #[test]
     fn markdown_reads_well() {
-        let mut r = sample("Tacos", &[("taco seasoning", 1.5, "tbsp", Category::Spices), ("lime", 2.0, "", Category::Produce)]);
+        let mut r = sample(
+            "Tacos",
+            &[
+                ("taco seasoning", 1.5, "tbsp", Category::Spices),
+                ("lime", 2.0, "", Category::Produce),
+            ],
+        );
         r.ingredients[0].estimated = true;
         r.ingredients[0].note = "1 packet".into();
         let md = markdown(&r);
@@ -208,6 +242,13 @@ mod tests {
         let mut db = Db::open_in_memory().unwrap();
         let dir = tempfile::tempdir().unwrap();
         assert!(import(&mut db, dir.path(), b"hello").is_err());
-        assert!(import(&mut db, dir.path(), br#"{"app":"other","format_version":1,"recipes":[]}"#).is_err());
+        assert!(
+            import(
+                &mut db,
+                dir.path(),
+                br#"{"app":"other","format_version":1,"recipes":[]}"#
+            )
+            .is_err()
+        );
     }
 }

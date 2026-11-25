@@ -14,7 +14,11 @@ async fn main() -> Result<()> {
     if let Some(port) = recipe_picker::config::env_var("RECIPE_PICKER_PORT").and_then(|p| p.parse().ok()) {
         config.port = port;
     }
-    let data_dir = if config.data_dir.is_absolute() { config.data_dir.clone() } else { root.join(&config.data_dir) };
+    let data_dir = if config.data_dir.is_absolute() {
+        config.data_dir.clone()
+    } else {
+        root.join(&config.data_dir)
+    };
     std::fs::create_dir_all(data_dir.join("images")).with_context(|| format!("creating {}", data_dir.display()))?;
 
     let db = Db::open(&data_dir.join("recipes.db"))?;
@@ -22,9 +26,12 @@ async fn main() -> Result<()> {
 
     // 127.0.0.1 = only reachable from this computer.
     let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
-    let listener = tokio::net::TcpListener::bind(addr)
-        .await
-        .with_context(|| format!("port {} is busy - is the app already running? (change `port` in config.toml)", config.port))?;
+    let listener = tokio::net::TcpListener::bind(addr).await.with_context(|| {
+        format!(
+            "port {} is busy - is the app already running? (change `port` in config.toml)",
+            config.port
+        )
+    })?;
     println!("Recipe Picker is running: open http://localhost:{}", config.port);
     println!("Data folder: {}", data_dir.display());
     println!("Press Ctrl+C to stop.");
