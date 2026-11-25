@@ -103,3 +103,67 @@ if (hideDone) {
   hideDone.addEventListener("change", apply);
   apply();
 }
+
+// ----- Cooking mode -----
+const cook = document.getElementById("cook");
+if (cook) {
+  // Remember ticks per recipe while you cook (in this browser only).
+  const storeKey = `cook-${cook.dataset.recipe}`;
+  const load = () => { try { return JSON.parse(sessionStorage.getItem(storeKey)) || {}; } catch { return {}; } };
+  const save = (s) => { try { sessionStorage.setItem(storeKey, JSON.stringify(s)); } catch {} };
+  const state = load();
+  const ticks = [...cook.querySelectorAll(".tick")];
+  const steps = [...cook.querySelectorAll(".step")];
+
+  const render = () => {
+    ticks.forEach((t, i) => t.classList.toggle("done", !!(state.ing || [])[i]));
+    steps.forEach((s, i) => s.classList.toggle("done", !!(state.steps || [])[i]));
+    const next = steps.find((s) => !s.classList.contains("done"));
+    steps.forEach((s) => s.classList.toggle("current", s === next));
+    cook.querySelector(".all-done").hidden = !!next || steps.length === 0;
+  };
+  const toggle = (kind, i) => {
+    state[kind] = state[kind] || [];
+    state[kind][i] = !state[kind][i];
+    save(state);
+    render();
+  };
+  ticks.forEach((t, i) => t.addEventListener("click", () => toggle("ing", i)));
+  steps.forEach((s, i) => s.addEventListener("click", () => {
+    const wasCurrent = s.classList.contains("current");
+    toggle("steps", i);
+    if (wasCurrent) {
+      const next = cook.querySelector(".step.current");
+      if (next) next.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }));
+  render();
+
+  // Text size, remembered between visits.
+  let size = 1.25;
+  try { size = parseFloat(localStorage.getItem("cook-size")) || size; } catch {}
+  const setSize = (v) => {
+    size = Math.min(2.2, Math.max(0.9, v));
+    document.body.style.setProperty("--cook-size", `${size}rem`);
+    try { localStorage.setItem("cook-size", size); } catch {}
+  };
+  setSize(size);
+  document.getElementById("text-bigger").addEventListener("click", () => setSize(size + 0.15));
+  document.getElementById("text-smaller").addEventListener("click", () => setSize(size - 0.15));
+
+  // Keep the screen awake while cooking (where the browser supports it).
+  const awake = document.getElementById("keep-awake");
+  let lock = null;
+  const requestLock = async () => {
+    if (!awake.checked || !("wakeLock" in navigator) || document.visibilityState !== "visible") return;
+    try { lock = await navigator.wakeLock.request("screen"); } catch { lock = null; }
+  };
+  if (!("wakeLock" in navigator)) {
+    awake.parentElement.title = "This browser can't keep the screen on";
+    awake.disabled = true;
+    awake.checked = false;
+  }
+  awake.addEventListener("change", () => { if (awake.checked) requestLock(); else if (lock) { lock.release(); lock = null; } });
+  document.addEventListener("visibilitychange", requestLock);
+  requestLock();
+}

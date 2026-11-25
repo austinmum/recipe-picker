@@ -4,7 +4,8 @@
 <div class="page-head">
   <h1>{{ recipe.title }}</h1>
   <div class="actions">
-    <a class="button" href="/recipes/{{ recipe.id }}/edit">Edit</a>
+    <a class="button" href="/recipes/{{ recipe.id }}/cook">👩‍🍳 Start cooking</a>
+    <a class="button secondary" href="/recipes/{{ recipe.id }}/edit">Edit</a>
     <form method="post" action="/recipes/{{ recipe.id }}/delete" data-confirm="Delete “{{ recipe.title }}”? This can't be undone.">
       <button class="danger">Delete</button>
     </form>

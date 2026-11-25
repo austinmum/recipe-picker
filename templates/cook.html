@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cooking: {{ recipe.title }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="cook-mode">
+  <header class="cook-bar">
+    <a href="/recipes/{{ recipe.id }}">← Done</a>
+    <div class="cook-title">
+      <h1>{{ recipe.title }}</h1>
+      <span class="muted">Serves {{ recipe.servings }}{% if let Some(m) = recipe.total_minutes %} · {{ m }} min{% endif %}</span>
+    </div>
+    <div class="cook-tools">
+      <button type="button" id="text-smaller" class="secondary" title="Smaller text">A−</button>
+      <button type="button" id="text-bigger" class="secondary" title="Bigger text">A+</button>
+      <label class="awake" title="Stop the screen going to sleep while this page is open"><input type="checkbox" id="keep-awake" checked> Keep screen on</label>
+    </div>
+  </header>
+
+  <main id="cook" class="cook-layout" data-recipe="{{ recipe.id }}">
+    <section class="cook-ingredients">
+      <h2>Ingredients</h2>
+      <p class="small muted">Tap to tick off as you get them out.</p>
+      <ul>
+        {% for l in lines %}
+        <li class="tick">
+          <span class="box" aria-hidden="true"></span>
+          <span><strong>{% if l.estimated %}~{% endif %}{{ l.amount }}</strong> {{ l.name }}
+            {% if l.estimated && !l.original.is_empty() %}<span class="small muted">(card: {{ l.original }})</span>{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="cook-steps">
+      <h2>Steps</h2>
+      <p class="small muted">Tap a step when it's done. The next one lights up.</p>
+      <ol>
+        {% for s in recipe.steps %}
+        <li class="step">
+          <span class="num">{{ loop.index }}</span>
+          <span class="text">{{ s }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% if !recipe.notes.is_empty() %}<h2>Notes</h2><p class="prewrap">{{ recipe.notes }}</p>{% endif %}
+      <p class="all-done" hidden>🎉 All done. Enjoy!</p>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

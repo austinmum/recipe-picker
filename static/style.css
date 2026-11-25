@@ -176,3 +176,35 @@ body.hide-done .list-item.have, body.hide-done .list-item.got { display: none; }
 .bad { color: var(--danger); font-weight: 600; }
 code { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 .3rem; font-size: .9em; }
 ul.plain { list-style: none; padding: 0; margin: 0; }
+
+/* Cooking mode: big text, easy to tap with messy hands */
+body.cook-mode { --cook-size: 1.25rem; font-size: var(--cook-size); }
+.cook-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.5rem;
+  padding: .6rem 1rem; background: var(--panel); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 5; font-size: 1rem;
+}
+.cook-bar > a { text-decoration: none; font-weight: 600; }
+.cook-title { flex: 1; min-width: 200px; }
+.cook-title h1 { font-size: 1.4rem; margin: 0; }
+.cook-tools { display: flex; gap: .5rem; align-items: center; }
+.cook-tools .awake { flex-direction: row; align-items: center; gap: .35rem; font-weight: 500; font-size: .9rem; }
+.cook-tools .awake input { width: auto; }
+.cook-layout { max-width: 1300px; display: grid; grid-template-columns: minmax(280px, 1fr) 2fr; gap: 2.5rem; align-items: start; }
+@media (max-width: 860px) { .cook-layout { grid-template-columns: 1fr; } }
+.cook-ingredients { position: sticky; top: 5rem; }
+@media (max-width: 860px) { .cook-ingredients { position: static; } }
+.cook-layout h2 { font-size: 1.3em; margin-top: 0; }
+.cook-ingredients ul, .cook-steps ol { list-style: none; padding: 0; margin: 0; }
+.tick { display: flex; gap: .7rem; align-items: flex-start; padding: .55rem .4rem; border-bottom: 1px dashed var(--line); cursor: pointer; border-radius: 6px; user-select: none; }
+.tick .box { flex: none; width: 1.1em; height: 1.1em; margin-top: .15em; border: 2px solid var(--muted); border-radius: 4px; }
+.tick.done { color: var(--muted); text-decoration: line-through; }
+.tick.done .box { background: var(--accent); border-color: var(--accent); }
+.step { display: flex; gap: 1rem; padding: 1rem; margin-bottom: .7rem; border: 2px solid var(--line); border-radius: var(--radius); background: var(--panel); cursor: pointer; line-height: 1.55; user-select: none; }
+.step .num { flex: none; width: 1.9em; height: 1.9em; border-radius: 50%; background: var(--bg); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.step.current { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.step.current .num { background: var(--accent); color: #fff; border-color: var(--accent); }
+.step.done { opacity: .5; }
+.step.done .num { background: var(--accent-soft); }
+.step.done .text { text-decoration: line-through; }
+.all-done { font-size: 1.3em; text-align: center; padding: 1rem; }

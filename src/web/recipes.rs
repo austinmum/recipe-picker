@@ -23,6 +23,7 @@ pub fn routes() -> Router<AppState> {
         .route("/recipes/new", get(new_form))
         .route("/recipes/save", post(save))
         .route("/recipes/{id}", get(show))
+        .route("/recipes/{id}/cook", get(cook))
         .route("/recipes/{id}/edit", get(edit_form))
         .route("/recipes/{id}/delete", post(delete))
 }
@@ -92,6 +93,23 @@ struct ShowPage {
     nav: &'static str,
     recipe: Recipe,
     lines: Vec<IngredientLine>,
+}
+
+/// Big-text view for the kitchen: tick off ingredients and steps as you go.
+#[derive(Template)]
+#[template(path = "cook.html")]
+struct CookPage {
+    recipe: Recipe,
+    lines: Vec<IngredientLine>,
+}
+
+async fn cook(State(state): State<AppState>, Path(id): Path<i64>) -> WebResult<Html<String>> {
+    let recipe = state
+        .db()
+        .get_recipe(id)?
+        .ok_or_else(|| AppError::not_found("Recipe"))?;
+    let lines = recipe.ingredients.iter().map(IngredientLine::from).collect();
+    page(CookPage { recipe, lines })
 }
 
 async fn show(State(state): State<AppState>, Path(id): Path<i64>) -> WebResult<Html<String>> {
