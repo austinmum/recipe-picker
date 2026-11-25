@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>Recipes <span class="muted">({{ total }})</span></h1>
+  <form class="search" method="get" action="/">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search title, ingredient or step…" autofocus>
+    <button>Search</button>
+    {% if !q.is_empty() %}<a href="/">Clear</a>{% endif %}
+  </form>
+</div>
+
+{% if recipes.is_empty() %}
+  {% if q.is_empty() %}
+  <div class="empty">
+    <p>No recipes yet.</p>
+    <p><a class="button" href="/import">Add from a photo</a> or <a class="button secondary" href="/recipes/new">type one in</a></p>
+  </div>
+  {% else %}
+  <p class="empty">Nothing matches “{{ q }}”.</p>
+  {% endif %}
+{% else %}
+<ul class="cards">
+  {% for r in recipes %}
+  <li class="card">
+    <a href="/recipes/{{ r.id }}">
+      {% if let Some(img) = r.thumbnail %}
+      <img src="/images/{{ img }}" alt="" loading="lazy">
+      {% else %}
+      <div class="noimg">🍽️</div>
+      {% endif %}
+      <div class="card-body">
+        <strong>{{ r.title }}</strong>
+        {% if !r.description.is_empty() %}<span class="desc">{{ r.description }}</span>{% endif %}
+        <span class="muted small">
+          {% if let Some(m) = r.total_minutes %}{{ m }} min · {% endif %}{{ r.ingredient_count }} ingredients
+        </span>
+      </div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

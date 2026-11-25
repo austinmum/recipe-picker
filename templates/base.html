@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Recipe Picker{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">🥕 Recipe Picker</a>
+    <nav>
+      <a href="/" {% if nav == "recipes" %}class="active"{% endif %}>Recipes</a>
+      <a href="/import" {% if nav == "import" %}class="active"{% endif %}>Add from photo</a>
+      <a href="/recipes/new" {% if nav == "manual" %}class="active"{% endif %}>Add manually</a>
+      <a href="/week" {% if nav == "week" %}class="active"{% endif %}>This week</a>
+      <a href="/list" {% if nav == "list" %}class="active"{% endif %}>Shopping list</a>
+      <a href="/settings" {% if nav == "settings" %}class="active"{% endif %}>Settings</a>
+      <a href="/export" {% if nav == "export" %}class="active"{% endif %}>Export</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

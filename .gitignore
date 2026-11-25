@@ -1,3 +1,9 @@
+# Recipe Picker: your recipes, photos, settings and keys stay on this computer
+data/
+config.toml
+.env
+*.zip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

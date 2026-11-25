@@ -1,0 +1,25 @@
+# Copy this file to config.toml and edit it. config.toml is ignored by git.
+# API keys do NOT go here: put them in a .env file (see .env.example).
+
+port = 3000            # open http://localhost:3000
+data_dir = "data"      # where recipes.db and photos are kept
+default_servings = 2   # HelloFresh cards list 2- and 4-person amounts; which to read
+
+[ai]
+# Which AI reads your recipe photos. Change this one line to switch:
+#   "openai"       OpenAI with an API key           -> needs OPENAI_API_KEY in .env
+#   "azure_key"    Azure OpenAI with an API key     -> needs AZURE_OPENAI_API_KEY in .env
+#   "azure_entra"  Azure OpenAI with your Azure login (Entra ID / RBAC)
+#                  -> run `az login` first; you need the
+#                     "Cognitive Services OpenAI User" role on the resource
+#   "none"         photo import turned off (typing recipes in still works)
+provider = "openai"
+
+[ai.openai]
+model = "gpt-4.1"      # any model that can read images
+
+[ai.azure]
+endpoint = "https://YOUR-RESOURCE.openai.azure.com"
+deployment = "YOUR-DEPLOYMENT-NAME"   # the name you gave the model deployment
+api_version = "2024-10-21"
+tenant = ""            # azure_entra only: tenant ID if your login has several

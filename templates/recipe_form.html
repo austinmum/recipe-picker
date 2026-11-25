@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }}{% endblock %}
+
+{% macro ing_row(r, categories) %}
+<tr class="ing-row{% if r.estimated %} estimated{% endif %}">
+  <td><input name="ing_quantity" value="{{ r.quantity }}" placeholder="1 1/2" class="qty"></td>
+  <td><input name="ing_unit" value="{{ r.unit }}" placeholder="tbsp" list="units" class="unit"></td>
+  <td><input name="ing_name" value="{{ r.name }}" placeholder="balsamic vinegar"></td>
+  <td>
+    <select name="ing_category">
+      {% for c in categories %}<option value="{{ c.value }}" {% if c.value == r.category %}selected{% endif %}>{{ c.label }}</option>{% endfor %}
+    </select>
+  </td>
+  <td>
+    <select name="ing_estimated" class="est-select" title="Was this amount estimated?">
+      <option value="0" {% if !r.estimated %}selected{% endif %}>exact</option>
+      <option value="1" {% if r.estimated %}selected{% endif %}>~ estimate</option>
+    </select>
+  </td>
+  <td class="orig">
+    <input type="hidden" name="ing_original" value="{{ r.original }}">
+    <input type="hidden" name="ing_note" value="{{ r.note }}">
+    {% if !r.original.is_empty() && r.original != r.name %}<span class="small muted">card: “{{ r.original }}”</span>{% endif %}
+    {% if !r.note.is_empty() %}<span class="small badge">{{ r.note }}</span>{% endif %}
+  </td>
+  <td><button type="button" class="link remove-row" title="Remove">✕</button></td>
+</tr>
+{% endmacro %}
+
+{% block content %}
+<h1>{{ heading }}</h1>
+{% if !intro.is_empty() %}<p class="notice">{{ intro }}</p>{% endif %}
+{% if estimated_count > 0 %}
+<p class="notice warn">{{ estimated_count }} amount{% if estimated_count != 1 %}s were{% else %} was{% endif %} estimated (highlighted below), e.g. a packet turned into tablespoons. Check they look right.</p>
+{% endif %}
+
+<form method="post" action="/recipes/save" class="recipe-form">
+  <input type="hidden" name="id" value="{{ recipe.id }}">
+  {% for img in recipe.images %}<input type="hidden" name="images" value="{{ img }}">{% endfor %}
+
+  <div class="grid">
+    <label class="wide">Title <input name="title" value="{{ recipe.title }}" required></label>
+    <label class="wide">Short description <input name="description" value="{{ recipe.description }}"></label>
+    <label>Serves <input name="servings" type="number" min="1" value="{{ recipe.servings }}"></label>
+    <label>Total minutes <input name="total_minutes" type="number" min="0" value="{{ minutes_text }}"></label>
+    <label>Source <input name="source" value="{{ recipe.source }}" placeholder="HelloFresh"></label>
+  </div>
+
+  <h2>Ingredients</h2>
+  <p class="small muted">Amounts can be 2, 1.5, 1/2 or 1 1/2. Leave the amount blank for “as needed”. Leave the unit blank for a count (2 limes). The aisle decides the shopping trip: produce, meat, dairy and bakery are bought on the recipe's trip, everything else on Trip 1.</p>
+  <table class="ing-table">
+    <thead><tr><th>Amount</th><th>Unit</th><th>Ingredient</th><th>Aisle</th><th>Amount is…</th><th></th><th></th></tr></thead>
+    <tbody id="ing-body">
+      {% for r in rows %}{% call ing_row(r, categories) %}{% endcall %}{% endfor %}
+    </tbody>
+  </table>
+  <template id="ing-template">{% for r in blank %}{% call ing_row(r, categories) %}{% endcall %}{% endfor %}</template>
+  <button type="button" id="add-row" class="secondary">+ Add ingredient</button>
+  <datalist id="units">
+    <option value="tsp"><option value="tbsp"><option value="cup"><option value="fl oz">
+    <option value="oz"><option value="lb"><option value="g"><option value="ml">
+    <option value="clove"><option value="can"><option value="slice"><option value="bunch"><option value="pinch">
+  </datalist>
+
+  <h2>Steps</h2>
+  <p class="small muted">One step per line.</p>
+  <textarea name="steps" rows="10">{{ steps_text }}</textarea>
+
+  <h2>Notes</h2>
+  <textarea name="notes" rows="3">{{ recipe.notes }}</textarea>
+
+  {% if !recipe.images.is_empty() %}
+  <h2>Photos</h2>
+  <div class="photos">
+    {% for img in recipe.images %}<a href="/images/{{ img }}" target="_blank"><img src="/images/{{ img }}" alt="Recipe photo"></a>{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="form-actions">
+    <button type="submit">Save recipe</button>
+    <a href="{% if recipe.id == 0 %}/{% else %}/recipes/{{ recipe.id }}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

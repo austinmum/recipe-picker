@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ recipe.title }}</h1>
+  <div class="actions">
+    <a class="button" href="/recipes/{{ recipe.id }}/edit">Edit</a>
+    <form method="post" action="/recipes/{{ recipe.id }}/delete" data-confirm="Delete “{{ recipe.title }}”? This can't be undone.">
+      <button class="danger">Delete</button>
+    </form>
+  </div>
+</div>
+{% if !recipe.description.is_empty() %}<p class="lead">{{ recipe.description }}</p>{% endif %}
+<p class="muted">
+  Serves {{ recipe.servings }}{% if let Some(m) = recipe.total_minutes %} · {{ m }} min{% endif %}{% if !recipe.source.is_empty() %} · {{ recipe.source }}{% endif %}
+</p>
+
+<div class="two-col">
+  <section>
+    <h2>Ingredients</h2>
+    <ul class="ingredients">
+      {% for l in lines %}
+      <li {% if l.estimated %}class="estimated" title="Estimated from: {{ l.original }}"{% endif %}>
+        <span class="amount">{% if l.estimated %}~{% endif %}{{ l.amount }}</span> {{ l.name }}
+        {% if l.estimated %}<span class="badge">estimated{% if !l.note.is_empty() %}: {{ l.note }}{% endif %}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  <section>
+    <h2>Steps</h2>
+    <ol class="steps">
+      {% for s in recipe.steps %}<li>{{ s }}</li>{% endfor %}
+    </ol>
+    {% if !recipe.notes.is_empty() %}<h2>Notes</h2><p class="prewrap">{{ recipe.notes }}</p>{% endif %}
+  </section>
+</div>
+
+{% if !recipe.images.is_empty() %}
+<h2>Original photos</h2>
+<div class="photos">
+  {% for img in recipe.images %}<a href="/images/{{ img }}" target="_blank"><img src="/images/{{ img }}" alt="Recipe photo"></a>{% endfor %}
+</div>
+{% endif %}
+{% endblock %}
