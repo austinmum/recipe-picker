@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Export{% endblock %}
+{% block content %}
+<h1>Export &amp; import</h1>
+{% if let Some(m) = message %}<p class="notice">{{ m }}</p>{% endif %}
+{% if let Some(e) = error %}<p class="error-box">{{ e }}</p>{% endif %}
+
+<section class="panel">
+  <h2 style="margin-top:0">Export all recipes</h2>
+  <p>Downloads one <code>.zip</code> with all {{ count }} recipe{% if count != 1 %}s{% endif %}:</p>
+  <ul>
+    <li><code>recipes.json</code>: everything, in a form this app can import again.</li>
+    <li><code>recipes/</code>: one readable Markdown file per recipe.</li>
+    <li><code>images/</code>: the original photos.</li>
+  </ul>
+  <p><a class="button" href="/export/download">Download export (.zip)</a></p>
+</section>
+
+<section class="panel">
+  <h2 style="margin-top:0">Import</h2>
+  <p>Restore from an export, e.g. on another computer. Recipes you already have (same title) are skipped, so nothing is duplicated.</p>
+  <form method="post" action="/export/import" enctype="multipart/form-data" class="add-extra">
+    <input type="file" name="file" accept=".zip,.json" required>
+    <button class="secondary">Import</button>
+  </form>
+</section>
+{% endblock %}

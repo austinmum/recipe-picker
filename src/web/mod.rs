@@ -1,5 +1,6 @@
 //! The browser screens. Each submodule is one screen.
 
+mod export;
 mod import;
 mod recipes;
 mod settings;
@@ -18,6 +19,8 @@ use axum::{
 use tower_http::services::ServeDir;
 
 use crate::{config::Config, db::Db};
+
+pub use recipes::is_safe_file_name;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -77,6 +80,7 @@ pub fn router(state: AppState) -> Router {
         .merge(week::routes())
         .merge(import::routes())
         .merge(settings::routes())
+        .merge(export::routes())
         .route("/static/style.css", get(|| async { ([(header::CONTENT_TYPE, "text/css")], include_str!("../../static/style.css")) }))
         .route("/static/app.js", get(|| async { ([(header::CONTENT_TYPE, "text/javascript")], include_str!("../../static/app.js")) }))
         .nest_service("/images", images)

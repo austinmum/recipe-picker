@@ -311,6 +311,11 @@ impl Db {
         Ok(())
     }
 
+    /// Today's date (YYYY-MM-DD, local time), for file names.
+    pub fn today(&self) -> Result<String> {
+        Ok(self.conn.query_row("SELECT date('now', 'localtime')", [], |r| r.get(0))?)
+    }
+
     /// Start a fresh week: clear picks, ticks and extra items.
     pub fn new_week(&self) -> Result<()> {
         self.conn.execute_batch("DELETE FROM week_picks; DELETE FROM list_checks; DELETE FROM extra_items;")?;
