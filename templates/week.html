@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}This week{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>This week</h1>
+  <form method="post" action="/week/new" data-confirm="Start a new week? This clears this week's picks, ticks and added items. Your recipes are not touched.">
+    <button class="secondary">Start a new week</button>
+  </form>
+</div>
+<p class="muted">Choose recipes and which shopping trip each one belongs to. Fresh ingredients (produce, meat, dairy, bread) are bought on that recipe's trip. Pantry items and spices are all bought on Trip 1.</p>
+
+{% if rows.is_empty() %}
+<div class="empty"><p>No recipes yet.</p><p><a class="button" href="/import">Add from a photo</a> or <a class="button secondary" href="/recipes/new">type one in</a></p></div>
+{% else %}
+<div class="week-tools">
+  <input type="search" id="week-filter" placeholder="Filter recipes…">
+</div>
+<form method="post" action="/week">
+  <ul class="pick-list">
+    {% for r in rows %}
+    <li class="pick-row{% if r.trip != 0 %} picked{% endif %}" data-search="{{ r.search }}">
+      {% if let Some(img) = r.thumbnail %}<img src="/images/{{ img }}" alt="" loading="lazy">{% else %}<span class="noimg">🍽️</span>{% endif %}
+      <a class="title" href="/recipes/{{ r.id }}" target="_blank">{{ r.title }}</a>
+      <div class="trip-choice" role="radiogroup" aria-label="Trip for {{ r.title }}">
+        <label><input type="radio" name="pick_{{ r.id }}" value="0" {% if r.trip == 0 %}checked{% endif %}>Skip</label>
+        <label><input type="radio" name="pick_{{ r.id }}" value="1" {% if r.trip == 1 %}checked{% endif %}>Trip 1</label>
+        <label><input type="radio" name="pick_{{ r.id }}" value="2" {% if r.trip == 2 %}checked{% endif %}>Trip 2</label>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  <div class="sticky-save">
+    <button type="submit">Save &amp; make shopping list</button>
+    <span class="muted"><strong id="pick-count">0</strong> recipes picked</span>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

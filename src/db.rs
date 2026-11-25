@@ -55,7 +55,10 @@ CREATE TABLE IF NOT EXISTS week_picks (
 CREATE TABLE IF NOT EXISTS list_checks (
     item_key TEXT PRIMARY KEY,
     have     INTEGER NOT NULL DEFAULT 0,
-    got      INTEGER NOT NULL DEFAULT 0
+    got      INTEGER NOT NULL DEFAULT 0,
+    -- The amount on the list when "got" was ticked. If the amount changes
+    -- later (another recipe added), the tick no longer counts.
+    got_amount TEXT NOT NULL DEFAULT ''
 );
 
 -- Items added to the list by hand.
@@ -266,22 +269,26 @@ impl Db {
         Ok(())
     }
 
-    /// Returns (have, got) ticks for every list item that has any.
-    pub fn checks(&self) -> Result<std::collections::HashMap<String, (bool, bool)>> {
-        let mut stmt = self.conn.prepare("SELECT item_key, have, got FROM list_checks")?;
-        let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, (r.get(1)?, r.get(2)?))))?;
+    /// Ticks for every list item that has any.
+    pub fn checks(&self) -> Result<std::collections::HashMap<String, Check>> {
+        let mut stmt = self.conn.prepare("SELECT item_key, have, got, got_amount FROM list_checks")?;
+        let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, Check { have: r.get(1)?, got: r.get(2)?, got_amount: r.get(3)? })))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
-    pub fn set_check(&self, key: &str, field: CheckField, value: bool) -> Result<()> {
-        let col = match field {
-            CheckField::Have => "have",
-            CheckField::Got => "got",
+    /// `amount` is the amount shown when ticking "got".
+    pub fn set_check(&self, key: &str, field: CheckField, value: bool, amount: &str) -> Result<()> {
+        match field {
+            CheckField::Have => self.conn.execute(
+                "INSERT INTO list_checks (item_key, have) VALUES (?1, ?2) ON CONFLICT(item_key) DO UPDATE SET have=excluded.have",
+                params![key, value],
+            )?,
+            CheckField::Got => self.conn.execute(
+                "INSERT INTO list_checks (item_key, got, got_amount) VALUES (?1, ?2, ?3)
+                 ON CONFLICT(item_key) DO UPDATE SET got=excluded.got, got_amount=excluded.got_amount",
+                params![key, value, amount],
+            )?,
         };
-        self.conn.execute(
-            &format!("INSERT INTO list_checks (item_key, {col}) VALUES (?1, ?2) ON CONFLICT(item_key) DO UPDATE SET {col}=excluded.{col}"),
-            params![key, value],
-        )?;
         Ok(())
     }
 
@@ -311,6 +318,13 @@ impl Db {
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Check {
+    pub have: bool,
+    pub got: bool,
+    pub got_amount: String,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum CheckField {
     Have,
@@ -331,26 +345,7 @@ fn fts_query(search: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    pub fn sample(title: &str, ingredients: &[(&str, f64, &str, Category)]) -> Recipe {
-        Recipe {
-            title: title.into(),
-            ingredients: ingredients
-                .iter()
-                .map(|(n, q, u, c)| Ingredient {
-                    original: format!("{q} {u} {n}"),
-                    name: n.to_string(),
-                    quantity: Some(*q),
-                    unit: u.to_string(),
-                    category: *c,
-                    estimated: false,
-                    note: String::new(),
-                })
-                .collect(),
-            steps: vec!["Cook it.".into()],
-            ..Recipe::empty(2)
-        }
-    }
+    use crate::models::sample;
 
     #[test]
     fn save_load_update_delete() {

@@ -73,7 +73,7 @@ document.querySelectorAll(".list-item input[type=checkbox]").forEach((box) => {
   box.addEventListener("change", async () => {
     const item = box.closest(".list-item");
     item.classList.toggle(box.dataset.field, box.checked);
-    const body = new URLSearchParams({ key: item.dataset.key, field: box.dataset.field, value: box.checked ? "1" : "0" });
+    const body = new URLSearchParams({ key: item.dataset.key, field: box.dataset.field, value: box.checked ? "1" : "0", amount: item.dataset.amount });
     try {
       const res = await fetch("/list/check", { method: "POST", body });
       if (!res.ok) throw new Error(await res.text());

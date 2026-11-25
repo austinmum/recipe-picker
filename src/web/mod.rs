@@ -1,6 +1,7 @@
 //! The browser screens. Each submodule is one screen.
 
 mod recipes;
+mod week;
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -58,6 +59,7 @@ pub fn router(state: AppState) -> Router {
     let images = ServeDir::new(state.images_dir());
     Router::new()
         .merge(recipes::routes())
+        .merge(week::routes())
         .route("/static/style.css", get(|| async { ([(header::CONTENT_TYPE, "text/css")], include_str!("../../static/style.css")) }))
         .route("/static/app.js", get(|| async { ([(header::CONTENT_TYPE, "text/javascript")], include_str!("../../static/app.js")) }))
         .nest_service("/images", images)

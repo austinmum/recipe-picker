@@ -160,3 +160,25 @@ pub struct ExtraItem {
     pub amount: String,
     pub trip: Trip,
 }
+
+/// Test helper: a recipe with the given (name, quantity, unit, category) ingredients.
+#[cfg(test)]
+pub fn sample(title: &str, ingredients: &[(&str, f64, &str, Category)]) -> Recipe {
+    Recipe {
+        title: title.into(),
+        ingredients: ingredients
+            .iter()
+            .map(|(n, q, u, c)| Ingredient {
+                original: format!("{q} {u} {n}"),
+                name: n.to_string(),
+                quantity: Some(*q),
+                unit: u.to_string(),
+                category: *c,
+                estimated: false,
+                note: String::new(),
+            })
+            .collect(),
+        steps: vec!["Cook it.".into()],
+        ..Recipe::empty(2)
+    }
+}

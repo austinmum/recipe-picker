@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Shopping list{% endblock %}
+
+{% macro item_row(i) %}
+<li class="list-item{% if i.have %} have{% endif %}{% if i.got %} got{% endif %}" data-key="{{ i.key }}" data-amount="{{ i.amount }}">
+  <span class="checks">
+    <label title="Already have it at home"><input type="checkbox" data-field="have" {% if i.have %}checked{% endif %}>have</label>
+    <label title="Put it in the cart"><input type="checkbox" data-field="got" {% if i.got %}checked{% endif %}>got</label>
+  </span>
+  <span class="what">
+    <span class="amount">{% if i.estimated %}~{% endif %}{{ i.amount }}</span> {{ i.name }}
+    {% if i.estimated %}<span class="badge" title="Part of this amount was estimated from a packet or similar">est.</span>{% endif %}
+    {% if let Some(id) = i.extra_id %}
+    <form method="post" action="/list/extra/{{ id }}/delete"><button class="link" title="Remove">✕</button></form>
+    {% endif %}
+    {% if !i.recipes.is_empty() %}<span class="for">for {{ i.recipes.join(", ") }}</span>{% endif %}
+  </span>
+</li>
+{% endmacro %}
+
+{% block content %}
+<div class="list-head">
+  <h1>Shopping list</h1>
+  <div class="actions">
+    <label class="small" style="flex-direction:row;gap:.4rem;font-weight:500"><input type="checkbox" id="hide-done" style="width:auto"> Hide ticked items</label>
+    <a class="button secondary" href="/list.txt" target="_blank">Plain text</a>
+    <a class="button secondary" href="/week">Change recipes</a>
+  </div>
+</div>
+{% if picked_count == 0 %}
+<p class="notice">No recipes picked yet. <a href="/week">Choose this week's recipes</a>. You can still add your own items below.</p>
+{% endif %}
+<p class="muted small">Tick <strong>have</strong> for things already at home, and <strong>got</strong> as they go in the cart. Ticks are saved as you click.</p>
+
+<div class="trips">
+  {% for t in trips %}
+  <section class="trip" id="trip{{ t.trip.num() }}">
+    <h2>Trip {{ t.trip.num() }} <span class="progress small muted"></span></h2>
+    {% if t.recipes.is_empty() %}
+    <p class="trip-recipes">No recipes on this trip.{% if t.trip.num() == 1 %} Pantry items for the whole week are still listed here.{% endif %}</p>
+    {% else %}
+    <p class="trip-recipes">For: {{ t.recipes.join(" · ") }}</p>
+    {% endif %}
+
+    {% for a in t.aisles %}
+    <h3>{{ a.label }}</h3>
+    <ul class="plain">
+      {% for i in a.items %}{% call item_row(i) %}{% endcall %}{% endfor %}
+    </ul>
+    {% endfor %}
+
+    {% if !t.extras.is_empty() %}
+    <h3>Added by you</h3>
+    <ul class="plain">
+      {% for i in t.extras %}{% call item_row(i) %}{% endcall %}{% endfor %}
+    </ul>
+    {% endif %}
+
+    <form class="add-extra" method="post" action="/list/extra">
+      <input type="hidden" name="trip" value="{{ t.trip.num() }}">
+      <input name="name" placeholder="Add an item (e.g. paper towels)" required>
+      <input name="amount" placeholder="Amount (optional)" style="max-width:150px">
+      <button class="secondary">Add</button>
+    </form>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}
