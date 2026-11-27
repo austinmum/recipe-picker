@@ -7,7 +7,7 @@
     <button class="secondary">Start a new week</button>
   </form>
 </div>
-<p class="muted">Choose recipes and which shopping trip each one belongs to. Fresh ingredients (produce, meat, dairy, bread) are bought on that recipe's trip. Pantry items and spices are all bought on Trip 1.</p>
+<p class="muted">Recipes marked <strong>⭐ Recommended</strong> share fresh produce with your picks but use a different protein, so less goes to waste. Choose recipes and which shopping trip each one belongs to. Fresh ingredients (produce, meat, dairy, bread) are bought on that recipe's trip. Pantry items and spices are all bought on Trip 1.</p>
 
 {% if rows.is_empty() %}
 <div class="empty"><p>No recipes yet.</p><p><a class="button" href="/import">Add from a photo</a> or <a class="button secondary" href="/recipes/new">type one in</a></p></div>
@@ -18,9 +18,12 @@
 <form method="post" action="/week">
   <ul class="pick-list">
     {% for r in rows %}
-    <li class="pick-row{% if r.trip != 0 %} picked{% endif %}" data-search="{{ r.search }}">
+    <li class="pick-row{% if r.trip != 0 %} picked{% endif %}" data-search="{{ r.search }}" data-produce="{{ r.produce }}" data-protein="{{ r.protein }}">
       {% if let Some(img) = r.thumbnail %}<img src="/images/{{ img }}" alt="" loading="lazy">{% else %}<span class="noimg">🍽️</span>{% endif %}
-      <a class="title" href="/recipes/{{ r.id }}" target="_blank">{{ r.title }}</a>
+      <div class="title">
+        <a href="/recipes/{{ r.id }}" target="_blank">{{ r.title }}</a>
+        <span class="rec" hidden>⭐ Recommended <span class="rec-why small"></span></span>
+      </div>
       <div class="trip-choice" role="radiogroup" aria-label="Trip for {{ r.title }}">
         <label><input type="radio" name="pick_{{ r.id }}" value="0" {% if r.trip == 0 %}checked{% endif %}>Skip</label>
         <label><input type="radio" name="pick_{{ r.id }}" value="1" {% if r.trip == 1 %}checked{% endif %}>Trip 1</label>

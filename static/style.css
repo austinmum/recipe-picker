@@ -145,7 +145,11 @@ label { display: flex; flex-direction: column; gap: .2rem; font-weight: 600; fon
 .pick-row:last-child { border-bottom: 0; }
 .pick-row.picked { background: var(--accent-soft); }
 .pick-row img, .pick-row .noimg { width: 56px; height: 42px; object-fit: cover; border-radius: 6px; background: var(--bg); flex: none; display: flex; align-items: center; justify-content: center; }
-.pick-row .title { flex: 1; min-width: 0; }
+.pick-row .title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.pick-row .rec { color: var(--accent); font-weight: 600; font-size: .85rem; }
+.pick-row .rec[hidden] { display: none; }
+.pick-row .rec-why { color: var(--muted); font-weight: normal; }
+.pick-row.recommended { box-shadow: inset 3px 0 0 var(--accent); }
 .trip-choice { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; flex: none; }
 .trip-choice label { flex-direction: row; font-weight: 500; padding: .3rem .7rem; cursor: pointer; border-right: 1px solid var(--line); font-size: .9rem; }
 .trip-choice label:last-child { border-right: 0; }

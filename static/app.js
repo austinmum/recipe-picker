@@ -56,6 +56,24 @@ if (weekFilter) {
   const update = () => {
     const picked = document.querySelectorAll(".pick-row input[value='1']:checked, .pick-row input[value='2']:checked").length;
     counter.textContent = picked;
+    recommend();
+  };
+  // Recommend unpicked recipes that share perishable produce with a pick
+  // but don't use a protein you've already picked.
+  const list = (row, key) => (row.dataset[key] ? row.dataset[key].split("|") : []);
+  const recommend = () => {
+    const picks = [...rows].filter((r) => r.classList.contains("picked"));
+    const produce = new Set(picks.flatMap((r) => list(r, "produce")));
+    const protein = new Set(picks.flatMap((r) => list(r, "protein")));
+    rows.forEach((r) => {
+      const shared = r.classList.contains("picked") ? [] : list(r, "produce").filter((p) => produce.has(p));
+      const sameProtein = list(r, "protein").some((p) => protein.has(p));
+      const on = shared.length > 0 && !sameProtein;
+      const badge = r.querySelector(".rec");
+      badge.hidden = !on;
+      r.classList.toggle("recommended", on);
+      if (on) badge.querySelector(".rec-why").textContent = "uses your " + shared.join(", ");
+    });
   };
   weekFilter.addEventListener("input", () => {
     const q = weekFilter.value.trim().toLowerCase();

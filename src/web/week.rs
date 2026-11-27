@@ -15,8 +15,9 @@ use serde::Deserialize;
 use super::{AppError, AppState, WebResult, page};
 use crate::{
     db::CheckField,
-    models::{Pick, Recipe, Trip},
+    models::{Category, Pick, Recipe, Trip},
     shopping::{self, TripList},
+    units::name_key,
 };
 
 pub fn routes() -> Router<AppState> {
@@ -39,6 +40,27 @@ struct PickRow {
     search: String,
     /// 0 = not this week, 1 or 2 = trip.
     trip: i64,
+    /// Perishable produce, "|"-separated, for the "Recommended" badge.
+    produce: String,
+    /// Meat and seafood, "|"-separated.
+    protein: String,
+}
+
+/// Produce that keeps for weeks, so sharing it isn't worth a recommendation.
+const KEEPS: [&str; 2] = ["garlic", "ginger"];
+
+/// The recipe's ingredient names in one aisle, matched loosely ("Carrots" = "carrot").
+fn names_in(r: &Recipe, category: Category) -> String {
+    let mut names: Vec<String> = r
+        .ingredients
+        .iter()
+        .filter(|i| i.category == category)
+        .map(|i| name_key(&i.name))
+        .filter(|n| !n.is_empty() && !KEEPS.contains(&n.as_str()))
+        .collect();
+    names.sort();
+    names.dedup();
+    names.join("|")
 }
 
 #[derive(Template)]
@@ -67,6 +89,8 @@ async fn week_page(State(state): State<AppState>) -> WebResult<Html<String>> {
             )
             .to_lowercase(),
             thumbnail: r.images.first().cloned(),
+            produce: names_in(&r, Category::Produce),
+            protein: names_in(&r, Category::MeatSeafood),
             trip: picks.get(&r.id).map(|t| t.num()).unwrap_or(0),
             title: r.title,
         })
@@ -172,4 +196,33 @@ async fn add_extra(State(state): State<AppState>, body: String) -> WebResult<Red
 async fn delete_extra(State(state): State<AppState>, Path(id): Path<i64>) -> WebResult<Redirect> {
     state.db().delete_extra_item(id)?;
     Ok(Redirect::to("/list"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::Ingredient;
+
+    #[test]
+    fn produce_names_skip_long_keepers() {
+        let mut r = Recipe::empty(2);
+        for (name, cat) in [
+            ("Carrots", Category::Produce),
+            ("Garlic", Category::Produce),
+            ("carrot", Category::Produce),
+            ("Chicken Thighs", Category::MeatSeafood),
+        ] {
+            r.ingredients.push(Ingredient {
+                original: name.into(),
+                name: name.into(),
+                quantity: None,
+                unit: String::new(),
+                category: cat,
+                estimated: false,
+                note: String::new(),
+            });
+        }
+        assert_eq!(names_in(&r, Category::Produce), "carrot");
+        assert_eq!(names_in(&r, Category::MeatSeafood), "chicken thigh");
+    }
 }
